@@ -8,12 +8,7 @@ on:
       - 'package/v*/**'
       - 'registry/v*/**'
       - '.github/workflows/schema-deployment.yml'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'package/v*/**'
-      - 'registry/v*/**'
+
   workflow_dispatch: # Allows manual triggering of the workflow
     inputs:
       force:
