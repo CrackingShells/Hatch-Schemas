@@ -49,18 +49,18 @@ jobs:
         with:
           node-version: '16'
 
-      - name: Install ajv-cli
-        run: npm install -g ajv-cli
+      - name: Install ajv-cli and formats
+        run: npm install -g ajv-cli ajv-formats
 
       - name: Validate package schema
         run: |
           echo "Validating package schema..."
-          ajv compile -s package/${{ github.event.inputs.pkg_schema_version }}/hatch_pkg_metadata_schema.json
+          ajv compile -s package/${{ github.event.inputs.pkg_schema_version }}/hatch_pkg_metadata_schema.json --spec=draft7
 
       - name: Validate registry schema
         run: |
           echo "Validating registry schema..."
-          ajv compile -s registry/${{ github.event.inputs.registry_schema_version }}/hatch_all_pkg_metadata_schema.json
+          ajv compile -s registry/${{ github.event.inputs.registry_schema_version }}/hatch_all_pkg_metadata_schema.json --spec=draft7
 
   test-deployment:
     if: ${{ github.event.inputs.deploy_test == 'true' }}
