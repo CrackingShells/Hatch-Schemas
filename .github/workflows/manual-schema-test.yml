@@ -1,6 +1,13 @@
 name: Manual Schema Test
 
 on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'package/v*/**'
+      - 'registry/v*/**'
+      - '.github/workflows/manual-schema-test.yml'
   workflow_dispatch:
     inputs:
       tested_branch:
