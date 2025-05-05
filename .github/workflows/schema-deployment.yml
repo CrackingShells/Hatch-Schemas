@@ -7,7 +7,7 @@ on:
     paths:
       - 'package/v*/**'
       - 'registry/v*/**'
-      - '.github/workflow/schema-deployment.yml'
+      - '.github/workflows/schema-deployment.yml'
   pull_request:
     branches:
       - main
@@ -15,6 +15,22 @@ on:
       - 'package/v*/**'
       - 'registry/v*/**'
   workflow_dispatch: # Allows manual triggering of the workflow
+    inputs:
+      force:
+        description: 'Force deployment even if no changes detected'
+        type: boolean
+        required: true
+        default: false
+      pkg_schema_version:
+        description: 'Package schema version'
+        type: string
+        required: false
+        default: 'v1'
+      registry_schema_version:
+        description: 'Registry schema version'
+        type: string
+        required: false
+        default: 'v1'
 
 permissions:
   contents: write    # For GitHub Releases
@@ -30,8 +46,10 @@ jobs:
   detect-versions:
     runs-on: ubuntu-latest
     outputs:
-      versions: ${{ steps.get-versions.outputs.versions }}
-      highest_version: ${{ steps.get-versions.outputs.highest_version }}
+      pkg_versions: ${{ steps.get-versions.outputs.pkg_versions }}
+      registry_versions: ${{ steps.get-versions.outputs.registry_versions }}
+      highest_pkg_version: ${{ steps.get-versions.outputs.highest_pkg_version }}
+      highest_registry_version: ${{ steps.get-versions.outputs.highest_registry_version }}
       changed_files: ${{ steps.changed-files.outputs.all_changed_files }}
     steps:
       - name: Checkout repository
@@ -47,42 +65,28 @@ jobs:
             package/v*/**
             registry/v*/**
 
-      - name: Detect version changes
+      - name: Detect versions from changed files
         id: get-versions
         run: |
-          # Find all distinct versions in changed files
-          VERSION_PATTERN='(v[0-9]+(\.[0-9]+)*)'
-          VERSIONS=()
+          # Make scripts executable
+          chmod +x ./scripts/detect_versions.sh
           
-          echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
+          # Use the script to detect versions from changed files
+          echo "Running version detection..."
           
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            if [[ $file =~ $VERSION_PATTERN ]]; then
-              VERSIONS+=("${BASH_REMATCH[1]}")
-            fi
-          done
-          
-          # Get unique versions
-          UNIQUE_VERSIONS=($(echo "${VERSIONS[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
-          
-          # Sort versions to find the highest
-          if [[ ${#UNIQUE_VERSIONS[@]} -gt 0 ]]; then
-            IFS=$'\n' SORTED=($(sort -Vr <<<"${UNIQUE_VERSIONS[*]}"))
-            unset IFS
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force }}" == "true" ]]; then
+            echo "Force deployment enabled. Using provided versions."
+            PKG_VERSION="${{ github.event.inputs.pkg_schema_version }}"
+            REG_VERSION="${{ github.event.inputs.registry_schema_version }}"
             
-            # Join unique versions as a JSON array for output
-            VERSIONS_JSON="[\"$(echo "${UNIQUE_VERSIONS[@]}" | sed 's/ /\", \"/g')\"]"
-            echo "versions=${VERSIONS_JSON}" >> $GITHUB_OUTPUT
-            echo "highest_version=${SORTED[0]}" >> $GITHUB_OUTPUT
-            
-            echo "Detected versions: ${UNIQUE_VERSIONS[*]}"
-            echo "Highest version: ${SORTED[0]}"
+            # Create JSON arrays for each schema type
+            echo "pkg_versions=[\"$PKG_VERSION\"]" >> $GITHUB_OUTPUT
+            echo "registry_versions=[\"$REG_VERSION\"]" >> $GITHUB_OUTPUT
+            echo "highest_pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
+            echo "highest_registry_version=$REG_VERSION" >> $GITHUB_OUTPUT
           else
-            echo "No version pattern detected in changed files"
-            echo "versions=[]" >> $GITHUB_OUTPUT
-            echo "highest_version=" >> $GITHUB_OUTPUT
-            echo "::warning::No schema versions detected in changed files. Stopping workflow."
-            exit 0  # Gracefully exit the workflow
+            # Process changed files to detect versions
+            ./scripts/detect_versions.sh ${{ steps.changed-files.outputs.all_changed_files }}
           fi
 
   validate-schemas:
@@ -100,75 +104,49 @@ jobs:
       - name: Install ajv-cli and formats
         run: npm install -g ajv-cli ajv-formats
 
-      - name: Validate package schema
+      - name: Validate schemas
         run: |
-          echo "Validating package schema..."
-          ajv compile -s package/${{ steps.detect-versions.outputs.highest_version }}/hatch_pkg_metadata_schema.json --spec=draft7 -c ajv-formats
-
-      - name: Validate registry schema
-        run: |
-          echo "Validating registry schema..."
-          ajv compile -s registry/${{ steps.detect-versions.outputs.highest_version }}/hatch_all_pkg_metadata_schema.json --spec=draft7 -c ajv-formats
+          # Make scripts executable
+          chmod +x ./scripts/validate_schemas.sh
+          
+          # Run validation on the detected schema versions
+          echo "Running schema validation..."
+          ./scripts/validate_schemas.sh "${{ needs.detect-versions.outputs.highest_pkg_version }}" "${{ needs.detect-versions.outputs.highest_registry_version }}"
 
   build-deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [detect-versions, validate-schemas]
     runs-on: ubuntu-latest
     env:
-      VERSIONS: ${{ needs.detect-versions.outputs.versions }}
-      HIGHEST_VERSION: ${{ needs.detect-versions.outputs.highest_version }}
+      PKG_VERSIONS: ${{ needs.detect-versions.outputs.pkg_versions }}
+      REGISTRY_VERSIONS: ${{ needs.detect-versions.outputs.registry_versions }}
+      HIGHEST_PKG_VERSION: ${{ needs.detect-versions.outputs.highest_pkg_version }}
+      HIGHEST_REGISTRY_VERSION: ${{ needs.detect-versions.outputs.highest_registry_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Parse versions
+      - name: Display version information
         run: | 
-          echo "Deploying versions: $VERSIONS with highest version: $HIGHEST_VERSION"
+          echo "Deploying package versions: $PKG_VERSIONS with highest package version: $HIGHEST_PKG_VERSION"
+          echo "Deploying registry versions: $REGISTRY_VERSIONS with highest registry version: $HIGHEST_REGISTRY_VERSION"
 
-      - name: Package schemas for all versions
+      - name: Package schemas
         run: |
-          mkdir -p artifacts
+          # Make scripts executable
+          chmod +x ./scripts/package_schemas.sh
           
-          # Get the versions as an array
-          VERSIONS_ARRAY=$(echo $VERSIONS | jq -r '.[]')
-          
-          # Loop through each version
-          for VERSION in $VERSIONS_ARRAY; do
-            echo "Processing version: $VERSION"
-            mkdir -p artifacts/$VERSION
-            
-            # Copy schemas to versioned directory
-            cp -r package artifacts/$VERSION/
-            cp -r registry artifacts/$VERSION/
-            
-            # Create metadata files for each version
-            echo "{\"version\": \"$VERSION\", \"build_date\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\", \"commit\": \"${{ github.sha }}\"}" > artifacts/$VERSION/metadata.json
-            
-            # Create version-specific zip for release
-            cd artifacts
-            zip -r "schemas-$VERSION.zip" $VERSION
-            cd ..
-          done
+          # Package schemas using the package_schemas.sh script
+          echo "Packaging schemas for release..."
+          ./scripts/package_schemas.sh ./artifacts "$PKG_VERSIONS" "$REGISTRY_VERSIONS" "${{ github.sha }}"
 
-      # Create GitHub Release for each version 
-      - name: Create GitHub Releases
+      - name: Create GitHub releases
         run: |
-          # Get the versions as an array
-          VERSIONS_ARRAY=$(echo $VERSIONS | jq -r '.[]')
+          # Make scripts executable
+          chmod +x ./scripts/create_releases.sh
           
-          # Process each version
-          for VERSION in $VERSIONS_ARRAY; do
-            echo "Creating release for version: $VERSION"
-            
-            # Get release asset path
-            ASSET_PATH="artifacts/schemas-$VERSION.zip"
-            
-            # Create a GitHub release using GitHub CLI
-            gh release create "schemas-$VERSION" \
-              --title "Schema Release $VERSION" \
-              --notes "Schema version $VERSION released on $(date -u +"%Y-%m-%d")" \
-              "$ASSET_PATH"
-          done
+          # Create releases using the create_releases.sh script
+          echo "Creating GitHub releases..."
+          ./scripts/create_releases.sh ./artifacts "$PKG_VERSIONS" "$REGISTRY_VERSIONS"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -178,40 +156,14 @@ jobs:
         uses: actions/configure-pages@v5
 
       # Update the "latest" pointer in a minimal GitHub Pages site
-      - name: Prepare latest pointer for GitHub Pages
+      - name: Prepare GitHub Pages content
         run: |
-          mkdir -p gh-pages-content
+          # Make scripts executable
+          chmod +x ./scripts/generate_gh_pages.sh
           
-          # Create an index.html that redirects to the highest version
-          cat > gh-pages-content/index.html << EOF
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="UTF-8">
-              <title>CrackingShells Schemas</title>
-              <meta http-equiv="refresh" content="0; url=https://github.com/${{ github.repository }}/releases/download/schemas-$HIGHEST_VERSION/schemas-$HIGHEST_VERSION.zip">
-            </head>
-            <body>
-              <h1>CrackingShells Schemas</h1>
-              <p>Redirecting to latest version ($HIGHEST_VERSION)...</p>
-              <p><a href="https://github.com/${{ github.repository }}/releases/download/schemas-$HIGHEST_VERSION/schemas-$HIGHEST_VERSION.zip">Click here if you are not redirected automatically</a></p>
-            </body>
-          </html>
-          EOF
-          
-          # Create a JSON file with version information for API consumers
-          cat > gh-pages-content/latest.json << EOF
-          {
-            "latest_version": "$HIGHEST_VERSION",
-            "release_url": "https://github.com/${{ github.repository }}/releases/tag/schemas-$HIGHEST_VERSION",
-            "download_url": "https://github.com/${{ github.repository }}/releases/download/schemas-$HIGHEST_VERSION/schemas-$HIGHEST_VERSION.zip",
-            "schema_urls": {
-              "package": "https://raw.githubusercontent.com/${{ github.repository }}/main/package/$HIGHEST_VERSION/hatch_pkg_metadata_schema.json",
-              "registry": "https://raw.githubusercontent.com/${{ github.repository }}/main/registry/$HIGHEST_VERSION/hatch_all_pkg_metadata_schema.json"
-            },
-            "updated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          }
-          EOF
+          # Generate the GitHub Pages content with our script
+          echo "Generating GitHub Pages content..."
+          ./scripts/generate_gh_pages.sh ./gh-pages-content "$HIGHEST_PKG_VERSION" "$HIGHEST_REGISTRY_VERSION" "${{ github.repository }}"
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -228,20 +180,29 @@ jobs:
           echo ""
           echo "URLs for each version:"
           
-          # Get the versions as an array
-          VERSIONS_ARRAY=$(echo $VERSIONS | jq -r '.[]')
+          # Get the package versions as an array
+          PKG_VERSIONS_ARRAY=$(echo $PKG_VERSIONS | jq -r '.[]')
           
-          # Report URLs for each version
-          for VERSION in $VERSIONS_ARRAY; do
-            echo "Version $VERSION:"
-            echo "- Download: https://github.com/${{ github.repository }}/releases/download/schemas-$VERSION/schemas-$VERSION.zip"
+          # Report URLs for each package version
+          for VERSION in $PKG_VERSIONS_ARRAY; do
+            echo "Package Version $VERSION:"
+            echo "- Download: https://github.com/${{ github.repository }}/releases/download/schemas-package-$VERSION/schemas-package-$VERSION.zip"
+          done
+          
+          # Get the registry versions as an array
+          REGISTRY_VERSIONS_ARRAY=$(echo $REGISTRY_VERSIONS | jq -r '.[]')
+          
+          # Report URLs for each registry version
+          for VERSION in $REGISTRY_VERSIONS_ARRAY; do
+            echo "Registry Version $VERSION:"
+            echo "- Download: https://github.com/${{ github.repository }}/releases/download/schemas-registry-$VERSION/schemas-registry-$VERSION.zip"
           done
           
           echo ""
-          echo "Latest version pointer:"
+          echo "Latest version pointers:"
           echo "- Web: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
           echo "- API: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/latest.json"
           echo ""
           echo "Direct schema URLs (always current):"
-          echo "- Package: https://raw.githubusercontent.com/${{ github.repository }}/main/package/$HIGHEST_VERSION/hatch_pkg_metadata_schema.json"
-          echo "- Registry: https://raw.githubusercontent.com/${{ github.repository }}/main/registry/$HIGHEST_VERSION/hatch_all_pkg_metadata_schema.json"
+          echo "- Package: https://raw.githubusercontent.com/${{ github.repository }}/main/package/$HIGHEST_PKG_VERSION/hatch_pkg_metadata_schema.json"
+          echo "- Registry: https://raw.githubusercontent.com/${{ github.repository }}/main/registry/$HIGHEST_REGISTRY_VERSION/hatch_all_pkg_metadata_schema.json"
