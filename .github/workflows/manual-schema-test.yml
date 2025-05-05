@@ -55,12 +55,12 @@ jobs:
       - name: Validate package schema
         run: |
           echo "Validating package schema..."
-          ajv compile -s package/${{ github.event.inputs.pkg_schema_version }}/hatch_pkg_metadata_schema.json --spec=draft7 --ajv.formats=email,uri
+          ajv compile -s package/${{ github.event.inputs.pkg_schema_version }}/hatch_pkg_metadata_schema.json --spec=draft7 -c ajv-formats
 
       - name: Validate registry schema
         run: |
           echo "Validating registry schema..."
-          ajv compile -s registry/${{ github.event.inputs.registry_schema_version }}/hatch_all_pkg_metadata_schema.json --spec=draft7 --ajv.formats=email,uri
+          ajv compile -s registry/${{ github.event.inputs.registry_schema_version }}/hatch_all_pkg_metadata_schema.json --spec=draft7 -c ajv-formats
 
   test-deployment:
     if: ${{ github.event.inputs.deploy_test == 'true' }}
