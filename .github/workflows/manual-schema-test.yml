@@ -1,0 +1,187 @@
+name: Manual Schema Test
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'package/v*/**'
+      - 'registry/v*/**'
+      - '.github/workflows/manual-schema-test.yml'
+  workflow_dispatch:
+    inputs:
+      tested_branch:
+        description: 'Branch to test against'
+        type: string
+        required: true
+        default: 'main'
+      test_schemas:
+        description: 'Test schema validation'
+        type: boolean
+        required: true
+        default: true
+      deploy_test:
+        description: 'Test artifact deployment'
+        type: boolean
+        required: true
+        default: false
+      pkg_schema_version:
+        description: 'Package schema version'
+        type: string
+        required: false
+        default: 'v1'
+      registry_schema_version:
+        description: 'Registry schema version'
+        type: string
+        required: false
+        default: 'v1'
+
+permissions:
+  contents: write    # For GitHub Releases
+  pages: write       # For GitHub Pages deployment
+  id-token: write    # Required for Pages deployment
+
+jobs:
+  validate-schemas:
+    if: ${{ github.event.inputs.test_schemas == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.tested_branch }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli
+
+      - name: Validate package schema
+        run: |
+          echo "Validating package schema..."
+          ajv validate -s package/${{ github.event.inputs.pkg_schema_version }}/hatch_pkg_metadata_schema.json
+
+      - name: Validate registry schema
+        run: |
+          echo "Validating registry schema..."
+          ajv validate -s registry/${{ github.event.inputs.registry_schema_version }}/hatch_all_pkg_metadata_schema.json
+
+  test-deployment:
+    if: ${{ github.event.inputs.deploy_test == 'true' }}
+    needs: [validate-schemas]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.tested_branch }}
+
+      - name: Set test artifact version
+        run: |
+          echo "TEST_VERSION=test-$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
+          echo "TEST_PKG_VERSION=${{ github.event.inputs.pkg_schema_version }}" >> $GITHUB_ENV
+          echo "TEST_REG_VERSION=${{ github.event.inputs.registry_schema_version }}" >> $GITHUB_ENV
+
+      - name: Package schemas for test release
+        run: |
+          mkdir -p artifacts/${{ env.TEST_VERSION }}
+          
+          # Copy schemas to versioned directory
+          cp -r package artifacts/${{ env.TEST_VERSION }}/
+          cp -r registry artifacts/${{ env.TEST_VERSION }}/
+          
+          # Create metadata file for test version
+          echo "{\"version\": \"${{ env.TEST_VERSION }}\", \"test_date\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\", \"commit\": \"${{ github.sha }}\"}" > artifacts/${{ env.TEST_VERSION }}/metadata.json
+          
+          # Create version-specific zip for release
+          cd artifacts
+          zip -r "schemas-${{ env.TEST_VERSION }}.zip" ${{ env.TEST_VERSION }}
+          cd ..
+
+      - name: Upload test artifacts to workflow
+        uses: actions/upload-artifact@v3
+        with:
+          name: schemas-${{ env.TEST_VERSION }}
+          path: artifacts/schemas-${{ env.TEST_VERSION }}.zip
+          retention-days: 3
+
+      - name: Test GitHub Release process
+        if: false  # Disabled by default to prevent creating actual GitHub releases during test
+        run: |
+          echo "Would create a GitHub release with tag 'schemas-${{ env.TEST_VERSION }}'"
+          echo "Release title: Test Schema Release ${{ env.TEST_VERSION }}"
+          echo "Release asset: artifacts/schemas-${{ env.TEST_VERSION }}.zip"
+          
+          # This is commented out to prevent actual release creation during tests
+          # Uncomment to test actual release creation (requires permissions)
+          # gh release create "schemas-${{ env.TEST_VERSION }}" \
+          #   --title "Test Schema Release ${{ env.TEST_VERSION }}" \
+          #   --notes "Test schema release created on $(date -u +"%Y-%m-%d"). DO NOT USE IN PRODUCTION." \
+          #   --prerelease \
+          #   "artifacts/schemas-${{ env.TEST_VERSION }}.zip"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Test GitHub Pages deployment
+        run: |
+          mkdir -p test-gh-pages-content
+          
+          # Create a test index.html that would redirect to the test version
+          cat > test-gh-pages-content/test-index.html << EOF
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="UTF-8">
+              <title>CrackingShells Schemas - TEST</title>
+              <meta http-equiv="refresh" content="0; url=https://github.com/${{ github.repository }}/releases/download/schemas-${{ env.TEST_VERSION }}/schemas-${{ env.TEST_VERSION }}.zip">
+            </head>
+            <body>
+              <h1>CrackingShells Schemas - TEST ENVIRONMENT</h1>
+              <p>This is a test redirect to version ${{ env.TEST_VERSION }}. Do not use in production.</p>
+              <p><a href="https://github.com/${{ github.repository }}/releases/download/schemas-${{ env.TEST_VERSION }}/schemas-${{ env.TEST_VERSION }}.zip">Click here for the test schema package</a></p>
+            </body>
+          </html>
+          EOF
+          
+          # Create a test JSON file with version information for API consumers
+          cat > test-gh-pages-content/test-latest.json << EOF
+          {
+            "latest_version": "${{ env.TEST_VERSION }}",
+            "release_url": "https://github.com/${{ github.repository }}/releases/tag/schemas-${{ env.TEST_VERSION }}",
+            "download_url": "https://github.com/${{ github.repository }}/releases/download/schemas-${{ env.TEST_VERSION }}/schemas-${{ env.TEST_VERSION }}.zip",
+            "schema_urls": {
+              "package": "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.inputs.tested_branch }}/package/${{ env.TEST_PKG_VERSION }}/hatch_pkg_metadata_schema.json",
+              "registry": "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.inputs.tested_branch }}/registry/${{ env.TEST_REG_VERSION }}/hatch_all_pkg_metadata_schema.json"
+            },
+            "updated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "is_test": true
+          }
+          EOF
+          
+          # Upload the test GitHub Pages content as artifacts
+          echo "Test GitHub Pages content would be deployed to gh-pages branch"
+
+      - name: Upload test GitHub Pages content
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-gh-pages-content
+          path: test-gh-pages-content/
+          retention-days: 3
+
+      - name: Echo test deployment URLs
+        run: |
+          echo "Test deployment URLs:"
+          echo ""
+          echo "Test GitHub Release:"
+          echo "- ZIP: https://github.com/${{ github.repository }}/releases/download/schemas-${{ env.TEST_VERSION }}/schemas-${{ env.TEST_VERSION }}.zip (simulated)"
+          echo ""
+          echo "Test GitHub Pages:"
+          echo "- Web: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/test-index.html (simulated)"
+          echo "- API: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/test-latest.json (simulated)"
+          echo ""
+          echo "Direct schema URLs:"
+          echo "- Package: https://raw.githubusercontent.com/${{ github.repository }}/main/package/${{ env.TEST_PKG_VERSION }}/hatch_pkg_metadata_schema.json"
+          echo "- Registry: https://raw.githubusercontent.com/${{ github.repository }}/main/registry/${{ env.TEST_REG_VERSION }}/hatch_all_pkg_metadata_schema.json"
