@@ -1,13 +1,6 @@
 name: Manual Schema Test
 
 on:
-  push:
-    branches:
-      - dev
-    paths:
-      - 'package/v*/**'
-      - 'registry/v*/**'
-      - '.github/workflows/manual-schema-test.yml'
   workflow_dispatch:
     inputs:
       tested_branch:
@@ -62,12 +55,12 @@ jobs:
       - name: Validate package schema
         run: |
           echo "Validating package schema..."
-          ajv validate -s package/${{ github.event.inputs.pkg_schema_version }}/hatch_pkg_metadata_schema.json
+          ajv compile -s package/${{ github.event.inputs.pkg_schema_version }}/hatch_pkg_metadata_schema.json
 
       - name: Validate registry schema
         run: |
           echo "Validating registry schema..."
-          ajv validate -s registry/${{ github.event.inputs.registry_schema_version }}/hatch_all_pkg_metadata_schema.json
+          ajv compile -s registry/${{ github.event.inputs.registry_schema_version }}/hatch_all_pkg_metadata_schema.json
 
   test-deployment:
     if: ${{ github.event.inputs.deploy_test == 'true' }}
