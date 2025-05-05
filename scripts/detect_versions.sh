@@ -64,16 +64,8 @@ for schema_type in "${SCHEMA_TYPES[@]}"; do
   fi
 done
 
-# Output results in GitHub Actions compatible format (legacy format)
-echo "::set-output name=pkg_versions::${VERSIONS_JSON[package]}"
-echo "::set-output name=registry_versions::${VERSIONS_JSON[registry]}"
-echo "::set-output name=highest_pkg_version::${HIGHEST_VERSION[package]}"
-echo "::set-output name=highest_registry_version::${HIGHEST_VERSION[registry]}"
-
-# Also output in the modern GitHub Actions compatible format
-{
-  echo "pkg_versions=${VERSIONS_JSON[package]}" >> "$GITHUB_OUTPUT" 
-  echo "registry_versions=${VERSIONS_JSON[registry]}" >> "$GITHUB_OUTPUT"
-  echo "highest_pkg_version=${HIGHEST_VERSION[package]}" >> "$GITHUB_OUTPUT"
-  echo "highest_registry_version=${HIGHEST_VERSION[registry]}" >> "$GITHUB_OUTPUT"
-} 2>/dev/null || true  # Ignore errors if GITHUB_OUTPUT isn't set
+# Output in the GitHub Actions compatible format
+echo "pkg_versions=${VERSIONS_JSON[package]}" >> "$GITHUB_OUTPUT" 
+echo "registry_versions=${VERSIONS_JSON[registry]}" >> "$GITHUB_OUTPUT"
+echo "highest_pkg_version=${HIGHEST_VERSION[package]}" >> "$GITHUB_OUTPUT"
+echo "highest_registry_version=${HIGHEST_VERSION[registry]}" >> "$GITHUB_OUTPUT"

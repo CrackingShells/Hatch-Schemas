@@ -8,12 +8,7 @@ on:
       - 'package/v*/**'
       - 'registry/v*/**'
       - '.github/workflows/schema-deployment.yml'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'package/v*/**'
-      - 'registry/v*/**'
+
   workflow_dispatch: # Allows manual triggering of the workflow
     inputs:
       force:
@@ -50,7 +45,7 @@ jobs:
       registry_versions: ${{ steps.get-versions.outputs.registry_versions }}
       highest_pkg_version: ${{ steps.get-versions.outputs.highest_pkg_version }}
       highest_registry_version: ${{ steps.get-versions.outputs.highest_registry_version }}
-      changed_files: ${{ steps.changed-files.outputs.all_changed_files }}
+      no-changes: ${{ steps.changed-files.outputs.all_changed_files == '' && github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force != 'true') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -64,6 +59,12 @@ jobs:
           files: |
             package/v*/**
             registry/v*/**
+
+      - name: Stop if no changes detected
+        if: steps.changed-files.outputs.all_changed_files == '' && github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force != 'true')
+        run: |
+          echo "No changes detected in package or registry schemas and force is not enabled. Exiting..."
+          exit 0
 
       - name: Detect versions from changed files
         id: get-versions
@@ -90,6 +91,7 @@ jobs:
           fi
 
   validate-schemas:
+    if: needs.detect-versions.outputs.no-changes == 'false'
     runs-on: ubuntu-latest
     needs: [detect-versions]
     steps:
@@ -114,6 +116,7 @@ jobs:
           ./scripts/validate_schemas.sh "${{ needs.detect-versions.outputs.highest_pkg_version }}" "${{ needs.detect-versions.outputs.highest_registry_version }}"
 
   build-deploy:
+    if: needs.detect-versions.outputs.no-changes == 'false'
     needs: [detect-versions, validate-schemas]
     runs-on: ubuntu-latest
     env:
