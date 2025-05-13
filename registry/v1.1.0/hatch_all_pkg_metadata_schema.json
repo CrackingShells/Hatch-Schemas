@@ -15,11 +15,6 @@
             "format": "date-time",
             "description": "Timestamp of when the registry was last updated"
         },
-        "artifact_base_url": {
-            "type": "string",
-            "format": "uri",
-            "description": "Base URL for all CI/CD artifacts"
-        },
         "repositories": {
             "type": "array",
             "description": "List of repositories containing packages",
@@ -66,8 +61,17 @@
                                     "description": "Available versions of this package",
                                     "items": {
                                         "type": "object",
-                                        "required": ["version", "release_uri", "added_date"],
+                                        "required": ["author","version", "release_uri", "added_date"],
                                         "properties": {
+                                            "author": {
+                                                "type": "object",
+                                                "required": ["GitHubID", "email"],
+                                                "properties": {
+                                                    "GitHubID": {"type": "string"},
+                                                    "email": {"type": "string", "format": "email"}
+                                                },
+                                                "description": "Author of the submission of this version"
+                                            },
                                             "version": {
                                                 "type": "string",
                                                 "description": "Semantic version of the package",
