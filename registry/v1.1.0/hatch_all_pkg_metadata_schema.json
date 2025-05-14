@@ -36,7 +36,7 @@
                         "description": "List of packages in this repository",
                         "items": {
                             "type": "object",
-                            "required": ["name", "versions", "latest_version", "description", "category", "tags"],
+                            "required": ["name", "versions", "latest_version", "description", "tags"],
                             "properties": {
                                 "name": {
                                     "type": "string",
@@ -46,10 +46,6 @@
                                 "description": {
                                     "type": "string",
                                     "description": "Human-readable description of the package"
-                                },
-                                "category": {
-                                    "type": "string",
-                                    "description": "Scientific domain or category"
                                 },
                                 "tags": {
                                     "type": "array",
