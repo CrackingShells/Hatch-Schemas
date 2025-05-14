@@ -1,5 +1,9 @@
 name: Schema Deployment
 
+# This workflow handles the deployment of schemas.
+# Schema validation occurs in a separate workflow (schema-validation.yml) that runs on pull requests.
+# This ensures schemas are already validated before they reach this deployment workflow.
+
 on:
   push:
     branches:
@@ -45,7 +49,7 @@ jobs:
       registry_versions: ${{ steps.get-versions.outputs.registry_versions }}
       highest_pkg_version: ${{ steps.get-versions.outputs.highest_pkg_version }}
       highest_registry_version: ${{ steps.get-versions.outputs.highest_registry_version }}
-      no-changes: ${{ steps.changed-files.outputs.all_changed_files == '' && github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force != 'true') }}
+      no-changes: ${{ steps.changed-files.outputs.all_changed_files == '' && (github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force != 'true')) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -61,7 +65,7 @@ jobs:
             registry/v*/**
 
       - name: Stop if no changes detected
-        if: steps.changed-files.outputs.all_changed_files == '' && github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force != 'true')
+        if: steps.changed-files.outputs.all_changed_files == '' && (github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force != 'true'))
         run: |
           echo "No changes detected in package or registry schemas and force is not enabled. Exiting..."
           exit 0
@@ -89,35 +93,9 @@ jobs:
             # Process changed files to detect versions
             ./scripts/detect_versions.sh ${{ steps.changed-files.outputs.all_changed_files }}
           fi
-
-  validate-schemas:
-    if: needs.detect-versions.outputs.no-changes == 'false'
-    runs-on: ubuntu-latest
-    needs: [detect-versions]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install ajv-cli and formats
-        run: npm install -g ajv-cli ajv-formats
-
-      - name: Validate schemas
-        run: |
-          # Make scripts executable
-          chmod +x ./scripts/validate_schemas.sh
-          
-          # Run validation on the detected schema versions
-          echo "Running schema validation..."
-          ./scripts/validate_schemas.sh "${{ needs.detect-versions.outputs.highest_pkg_version }}" "${{ needs.detect-versions.outputs.highest_registry_version }}"
-
   build-deploy:
     if: needs.detect-versions.outputs.no-changes == 'false'
-    needs: [detect-versions, validate-schemas]
+    needs: [detect-versions]
     runs-on: ubuntu-latest
     env:
       PKG_VERSIONS: ${{ needs.detect-versions.outputs.pkg_versions }}
