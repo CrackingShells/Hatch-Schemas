@@ -62,14 +62,33 @@
                 "required": ["name", "type"],
                 "properties": {
                     "type": {
-                        "type": "string",
-                        "enum": ["local", "remote"],
-                        "description": "Type of dependency"
-                    },
-                    "uri": {
-                        "type": "string",
-                        "format": "uri",
-                        "description": "URI for the dependency. If local, expecting a path to a local directory. If remote, expecting a URL. Local exists for package development but is not allowed in the registry."
+                        "oneOf": [
+                            {
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": ["local"],
+                                        "description": "Type of dependency"
+                                    },
+                                    "path": {
+                                        "type": "string",
+                                        "format": "path",
+                                        "description": "If local, expecting a path to the root directory of the local package."
+                                    }
+                                },
+                                "required": ["type", "path"]
+                            },
+                            {
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": ["remote"],
+                                        "description": "Type of dependency"
+                                    }
+                                },
+                                "required": ["type"]
+                            }
+                        ]
                     },
                     "name": {
                         "type": "string",
