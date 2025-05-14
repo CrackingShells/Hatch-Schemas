@@ -3,7 +3,7 @@
     "title": "CrackingShells Package Registry",
     "description": "Schema for a centralized registry of all packages across CrackingShells repositories",
     "type": "object",
-    "required": ["registry_schema_version", "last_updated", "repositories"],
+    "required": ["registry_schema_version", "last_updated", "repositories", "stats"],
     "properties": {
         "registry_schema_version": {
             "type": "string",
@@ -36,7 +36,7 @@
                         "description": "List of packages in this repository",
                         "items": {
                             "type": "object",
-                            "required": ["name", "versions", "latest_version", "description", "category", "tags"],
+                            "required": ["name", "versions", "latest_version", "description", "tags"],
                             "properties": {
                                 "name": {
                                     "type": "string",
@@ -46,10 +46,6 @@
                                 "description": {
                                     "type": "string",
                                     "description": "Human-readable description of the package"
-                                },
-                                "category": {
-                                    "type": "string",
-                                    "description": "Scientific domain or category"
                                 },
                                 "tags": {
                                     "type": "array",
