@@ -70,10 +70,10 @@
             "items": {
                 "type": "object",
                 "required": ["name", "type"],
-                "properties": {
-                    "type": {
+                "properties": {                    "type": {
                         "oneOf": [
                             {
+                                "type": "object",
                                 "properties": {
                                     "type": {
                                         "type": "string",
@@ -82,13 +82,13 @@
                                     },
                                     "path": {
                                         "type": "string",
-                                        "format": "path",
                                         "description": "If local, expecting a path to the root directory of the local package."
                                     }
                                 },
                                 "required": ["type", "path"]
                             },
                             {
+                                "type": "object",
                                 "properties": {
                                     "type": {
                                         "type": "string",
