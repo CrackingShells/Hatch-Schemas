@@ -64,7 +64,6 @@ cat > "$OUTPUT_DIR/index.html" << EOF
   <head>
     <meta charset="UTF-8">
     <title>Hatch Schemas</title>
-    <meta http-equiv="refresh" content="0; url=https://github.com/$REPO/releases">
     <style>
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -89,10 +88,7 @@ cat > "$OUTPUT_DIR/index.html" << EOF
       <div class="schema-versions">
 $(generate_schema_section "package")
         
-$(generate_schema_section "registry")
-      </div>
-      
-      <p>You are being redirected to the releases page...</p>
+$(generate_schema_section "registry")      </div>
     </div>
   </body>
 </html>
