@@ -48,7 +48,21 @@
                 }
             }
         },
-        "license": {"type": "string"},
+        "license": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name of the license"
+                },
+                "uri": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL to the license text. It can point to a file in the package or an external URL."
+                }
+            }
+        },
         "repository": {"type": "string", "format": "uri"},
         "documentation": {"type": "string", "format": "uri"},
         "hatch_dependencies": {
