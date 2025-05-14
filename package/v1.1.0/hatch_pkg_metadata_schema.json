@@ -3,7 +3,7 @@
     "title": "Hatch Package Metadata",
     "description": "Schema for Hatch MCP Server package metadata",
     "type": "object",
-    "required": ["package_schema_version", "name", "version", "entry_point", "description", "category", "tags", "author", "license"],
+    "required": ["package_schema_version", "name", "version", "entry_point", "description", "tags", "author", "license"],
     "properties": {
         "package_schema_version": {
             "type": "string",
@@ -23,10 +23,6 @@
         "description": {
             "type": "string",
             "description": "Human-readable description of the package"
-        },
-        "category": {
-            "type": "string",
-            "description": "Scientific domain or category"
         },
         "tags": {
             "type": "array",
