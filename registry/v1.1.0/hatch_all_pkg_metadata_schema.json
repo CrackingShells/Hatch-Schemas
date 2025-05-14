@@ -3,7 +3,7 @@
     "title": "CrackingShells Package Registry",
     "description": "Schema for a centralized registry of all packages across CrackingShells repositories",
     "type": "object",
-    "required": ["registry_schema_version", "last_updated", "repositories"],
+    "required": ["registry_schema_version", "last_updated", "repositories", "stats"],
     "properties": {
         "registry_schema_version": {
             "type": "string",
