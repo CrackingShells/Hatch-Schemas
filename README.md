@@ -39,10 +39,6 @@ These schemas are distributed through **GitHub Releases** with direct file attac
 
 See the [Schema Access Guide](docs/usage/access.md) for detailed instructions.
 
-### Referencing in Your JSON Files
-
-You can reference these schemas in your JSON files using the `$schema` property. For examples and best practices, see the [Usage Guide](docs/usage/index.md).
-
 ### Programmatic Usage
 
 A simple schema loading example:
@@ -63,10 +59,6 @@ For more detailed examples, including manual schema retrieval, validation, cachi
 ## Schema Versioning
 
 New schema versions are published automatically when changes to versioned schema folders are merged to `main`. Each release is tagged with the format `schemas-{type}-{version}` (e.g., `schemas-package-v1.2.0`).
-
-For detailed information on versioning strategy, release process, and version compatibility, see the [Schema Versioning Guide](docs/versions.md).
-
-For instructions on migrating between schema versions or from GitHub Pages to GitHub Releases, see the [Migration Guide](docs/migration.md).
 
 ## Contribution Guidelines
 
