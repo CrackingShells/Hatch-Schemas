@@ -1,153 +1,228 @@
 name: Manual Schema Test
 
+# This workflow provides a dry-run environment for testing schema deployment.
+# It mirrors the main deployment workflow but uses test release tags to avoid
+# interfering with production releases.
+
 on:
   workflow_dispatch:
     inputs:
-      tested_branch:
+      test_branch:
         description: 'Branch to test against'
         type: string
         required: true
         default: 'main'
-      test_schemas:
-        description: 'Test schema validation'
-        type: boolean
-        required: true
-        default: true
-      deploy_test:
-        description: 'Test artifact deployment'
+      pkg_schema_version:
+        description: 'Package schema version to test'
+        type: string
+        required: false
+        default: 'v1.1.0'
+      registry_schema_version:
+        description: 'Registry schema version to test'
+        type: string
+        required: false
+        default: 'v1.1.0'
+      create_test_releases:
+        description: 'Create test releases (with -test suffix)'
         type: boolean
         required: true
         default: false
-      pkg_schema_version:
-        description: 'Package schema version'
-        type: string
-        required: false
-        default: 'v1'
-      registry_schema_version:
-        description: 'Registry schema version'
-        type: string
-        required: false
-        default: 'v1'
 
 permissions:
   contents: write    # For GitHub Releases
-  pages: write       # For GitHub Pages deployment
-  id-token: write    # Required for Pages deployment
 
 jobs:
-  validate-schemas:
-    if: ${{ github.event.inputs.test_schemas == 'true' }}
+  prepare-test-data:
     runs-on: ubuntu-latest
+    outputs:
+      pkg_versions: ${{ steps.setup-test.outputs.pkg_versions }}
+      registry_versions: ${{ steps.setup-test.outputs.registry_versions }}
+      highest_pkg_version: ${{ steps.setup-test.outputs.highest_pkg_version }}
+      highest_registry_version: ${{ steps.setup-test.outputs.highest_registry_version }}
+      has_changes: 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tested_branch }}
+          ref: ${{ github.event.inputs.test_branch }}
+          fetch-depth: 0
 
-      - name: Set up Node.js
+      - name: Setup test data
+        id: setup-test
+        run: |
+          # Simulate the same logic as the main workflow but with forced test data
+          pkg_version="${{ github.event.inputs.pkg_schema_version }}"
+          registry_version="${{ github.event.inputs.registry_schema_version }}"
+          
+          # Create JSON arrays (same format as main workflow)
+          echo "pkg_versions=[\"$pkg_version\"]" >> $GITHUB_OUTPUT
+          echo "registry_versions=[\"$registry_version\"]" >> $GITHUB_OUTPUT
+          echo "highest_pkg_version=$pkg_version" >> $GITHUB_OUTPUT
+          echo "highest_registry_version=$registry_version" >> $GITHUB_OUTPUT
+          
+          echo "🧪 Test Configuration:"
+          echo "- Branch: ${{ github.event.inputs.test_branch }}"
+          echo "- Package Version: $pkg_version"
+          echo "- Registry Version: $registry_version"
+          echo "- Will Create Releases: ${{ github.event.inputs.create_test_releases }}"
+
+  validate-schemas:
+    needs: [prepare-test-data]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        schema-type: [package, registry]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.test_branch }}
+
+      - name: Setup Node.js for schema validation
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: '18'
+          cache: 'npm'
 
-      - name: Install ajv-cli and formats
+      - name: Install AJV for validation
         run: npm install -g ajv-cli ajv-formats
 
       - name: Validate schemas
         run: |
-          # Make scripts executable
-          chmod +x ./scripts/validate_schemas.sh
+          schema_type="${{ matrix.schema-type }}"
+          if [[ "$schema_type" == "package" ]]; then
+            versions='${{ needs.prepare-test-data.outputs.pkg_versions }}'
+            file_name="hatch_pkg_metadata_schema.json"
+          else
+            versions='${{ needs.prepare-test-data.outputs.registry_versions }}'
+            file_name="hatch_all_pkg_metadata_schema.json"
+          fi
           
-          # Run validation on the specified schema versions
-          echo "Validating schemas..."
-          ./scripts/validate_schemas.sh "${{ github.event.inputs.pkg_schema_version }}" "${{ github.event.inputs.registry_schema_version }}"
+          echo "🔍 Validating $schema_type schemas for versions: $versions"
+          for version in $(echo "$versions" | jq -r '.[]'); do
+            schema_file="$schema_type/$version/$file_name"
+            if [[ -f "$schema_file" ]]; then
+              echo "✅ Validating: $schema_file"
+              if ajv compile -s "$schema_file" --spec=draft7 -c ajv-formats; then
+                echo "✅ $schema_type schema $version validation successful"
+              else
+                echo "❌ $schema_type schema $version validation failed"
+                exit 1
+              fi
+            else
+              echo "❌ Schema file not found at $schema_file"
+              exit 1
+            fi
+          done
 
-  test-deployment:
-    if: ${{ github.event.inputs.deploy_test == 'true' }}
-    needs: [validate-schemas]
+  test-release-creation:
+    if: github.event.inputs.create_test_releases == 'true'
+    needs: [prepare-test-data, validate-schemas]
     runs-on: ubuntu-latest
+    env:
+      PKG_VERSIONS: ${{ needs.prepare-test-data.outputs.pkg_versions }}
+      REGISTRY_VERSIONS: ${{ needs.prepare-test-data.outputs.registry_versions }}
+      HIGHEST_PKG_VERSION: ${{ needs.prepare-test-data.outputs.highest_pkg_version }}
+      HIGHEST_REGISTRY_VERSION: ${{ needs.prepare-test-data.outputs.highest_registry_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tested_branch }}
+          ref: ${{ github.event.inputs.test_branch }}
 
-      - name: Set test artifact version
-        run: |
-          echo "TEST_ID=test-$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
-          echo "TEST_PKG_VERSION=${{ github.event.inputs.pkg_schema_version }}" >> $GITHUB_ENV
-          echo "TEST_REG_VERSION=${{ github.event.inputs.registry_schema_version }}" >> $GITHUB_ENV
-          
-          # Create JSON arrays for each schema type
-          echo "PKG_VERSIONS_JSON=[\"${{ github.event.inputs.pkg_schema_version }}\"]" >> $GITHUB_ENV
-          echo "REG_VERSIONS_JSON=[\"${{ github.event.inputs.registry_schema_version }}\"]" >> $GITHUB_ENV
+      - name: Display test deployment information
+        run: | 
+          echo "🚀 Test Deployment Information:"
+          echo "- Package Versions: $PKG_VERSIONS"
+          echo "- Registry Versions: $REGISTRY_VERSIONS"
+          echo "- Highest Package Version: $HIGHEST_PKG_VERSION" 
+          echo "- Highest Registry Version: $HIGHEST_REGISTRY_VERSION"
 
-      - name: Package schemas for test release
-        run: |
-          # Make scripts executable
-          chmod +x ./scripts/package_schemas.sh
-          
-          # Create artifacts directory
-          mkdir -p artifacts
-          
-          # Use the package_schemas.sh script to package the schemas
-          echo "Packaging schemas for testing..."
-          ./scripts/package_schemas.sh ./artifacts "$PKG_VERSIONS_JSON" "$REG_VERSIONS_JSON" "${{ github.sha }}"
-          
-          # Add test ID to the zip filenames
-          if [ ! -z "$TEST_PKG_VERSION" ]; then
-            mv artifacts/package/schemas-package-$TEST_PKG_VERSION.zip artifacts/package/schemas-package-$TEST_PKG_VERSION-$TEST_ID.zip
-          fi
-          
-          if [ ! -z "$TEST_REG_VERSION" ]; then
-            mv artifacts/registry/schemas-registry-$TEST_REG_VERSION.zip artifacts/registry/schemas-registry-$TEST_REG_VERSION-$TEST_ID.zip
-          fi
-
-      - name: Upload test artifacts to workflow
-        uses: actions/upload-artifact@v4
+      - name: Create test package schema releases
+        if: needs.prepare-test-data.outputs.pkg_versions != '[]'
+        uses: softprops/action-gh-release@v2.2.2
         with:
-          name: schemas-test-${{ env.TEST_ID }}
-          path: artifacts/
-          retention-days: 3
+          tag_name: schemas-package-${{ needs.prepare-test-data.outputs.highest_pkg_version }}-test
+          name: "[TEST] Package Schema Release ${{ needs.prepare-test-data.outputs.highest_pkg_version }}"
+          body: |
+            🧪 **TEST RELEASE** - Safe to delete
+            
+            Package schema version ${{ needs.prepare-test-data.outputs.highest_pkg_version }} test release
+            
+            **Test Branch:** ${{ github.event.inputs.test_branch }}
+            **Changed Versions:** ${{ needs.prepare-test-data.outputs.pkg_versions }}
+            **Commit:** ${{ github.sha }}
+            **Created:** ${{ github.run_id }}
+          files: |
+            package/${{ needs.prepare-test-data.outputs.highest_pkg_version }}/*
+          fail_on_unmatched_files: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Test GitHub Pages deployment
-        run: |
-          # Make scripts executable
-          chmod +x ./scripts/generate_gh_pages.sh
-          
-          # Create directory for test GitHub Pages content
-          mkdir -p test-gh-pages-content
-          
-          # Use our script to generate test GitHub Pages content
-          echo "Generating test GitHub Pages content..."
-          ./scripts/generate_gh_pages.sh ./test-gh-pages-content "$TEST_PKG_VERSION" "$TEST_REG_VERSION" "${{ github.repository }}"
-          
-          # Add test indicator to the generated content
-          sed -i 's/<h1>Hatch Schemas<\/h1>/<h1>Hatch Schemas - TEST ENVIRONMENT<\/h1>/g' ./test-gh-pages-content/index.html
-          jq '. += {"is_test": true, "test_id": "'"$TEST_ID"'"}' ./test-gh-pages-content/latest.json > ./test-gh-pages-content/latest.json.tmp && mv ./test-gh-pages-content/latest.json.tmp ./test-gh-pages-content/latest.json
-
-      - name: Upload test GitHub Pages content
-        uses: actions/upload-artifact@v4
+      - name: Create test registry schema releases  
+        if: needs.prepare-test-data.outputs.registry_versions != '[]'
+        uses: softprops/action-gh-release@v2.2.2
         with:
-          name: test-gh-pages-content-${{ env.TEST_ID }}
-          path: test-gh-pages-content/
-          retention-days: 3
+          tag_name: schemas-registry-${{ needs.prepare-test-data.outputs.highest_registry_version }}-test
+          name: "[TEST] Registry Schema Release ${{ needs.prepare-test-data.outputs.highest_registry_version }}"
+          body: |
+            🧪 **TEST RELEASE** - Safe to delete
+            
+            Registry schema version ${{ needs.prepare-test-data.outputs.highest_registry_version }} test release
+            
+            **Test Branch:** ${{ github.event.inputs.test_branch }}
+            **Changed Versions:** ${{ needs.prepare-test-data.outputs.registry_versions }}
+            **Commit:** ${{ github.sha }}
+            **Created:** ${{ github.run_id }}
+          files: |
+            registry/${{ needs.prepare-test-data.outputs.highest_registry_version }}/*
+          fail_on_unmatched_files: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Echo test deployment URLs
+  generate-test-summary:
+    needs: [prepare-test-data, validate-schemas, test-release-creation]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate test summary
         run: |
-          echo "Test deployment URLs:"
-          echo ""
+          echo "## 🧪 Schema Test Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [ ! -z "$TEST_PKG_VERSION" ]; then
-            echo "Test Package Schema:"
-            echo "- ZIP: artifacts/package/schemas-package-$TEST_PKG_VERSION-$TEST_ID.zip (simulated)"
-            echo "- JSON: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.inputs.tested_branch }}/package/$TEST_PKG_VERSION/hatch_pkg_metadata_schema.json"
+          echo "### Test Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch Tested:** ${{ github.event.inputs.test_branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package Version:** ${{ needs.prepare-test-data.outputs.highest_pkg_version }}" >> $GITHUB_STEP_SUMMARY  
+          echo "- **Registry Version:** ${{ needs.prepare-test-data.outputs.highest_registry_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Releases Created:** ${{ github.event.inputs.create_test_releases }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Validation Results" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ needs.validate-schemas.result }}" == "success" ]]; then
+            echo "✅ **Schema Validation:** PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Schema Validation:** FAILED" >> $GITHUB_STEP_SUMMARY
           fi
+          echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [ ! -z "$TEST_REG_VERSION" ]; then
-            echo "Test Registry Schema:"
-            echo "- ZIP: artifacts/registry/schemas-registry-$TEST_REG_VERSION-$TEST_ID.zip (simulated)"
-            echo "- JSON: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.inputs.tested_branch }}/registry/$TEST_REG_VERSION/hatch_all_pkg_metadata_schema.json"
+          if [[ "${{ github.event.inputs.create_test_releases }}" == "true" ]]; then
+            echo "### Test Releases Created" >> $GITHUB_STEP_SUMMARY
+            
+            if [[ "${{ needs.prepare-test-data.outputs.pkg_versions }}" != "[]" ]]; then
+              version="${{ needs.prepare-test-data.outputs.highest_pkg_version }}"
+              echo "- **Package**: [schemas-package-$version-test](https://github.com/${{ github.repository }}/releases/tag/schemas-package-$version-test)" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [[ "${{ needs.prepare-test-data.outputs.registry_versions }}" != "[]" ]]; then
+              version="${{ needs.prepare-test-data.outputs.highest_registry_version }}"
+              echo "- **Registry**: [schemas-registry-$version-test](https://github.com/${{ github.repository }}/releases/tag/schemas-registry-$version-test)" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "💡 **Note:** Test releases are marked as pre-releases and can be safely deleted." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Test Mode" >> $GITHUB_STEP_SUMMARY
+            echo "📋 **Dry Run Only** - No releases were created" >> $GITHUB_STEP_SUMMARY
+            echo "Set 'Create test releases' to true to test the full release pipeline." >> $GITHUB_STEP_SUMMARY
           fi
-          
-          echo ""
-          echo "Test GitHub Pages content available in workflow artifacts"
