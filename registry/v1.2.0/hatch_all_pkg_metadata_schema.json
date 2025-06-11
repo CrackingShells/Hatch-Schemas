@@ -294,8 +294,8 @@
                                                                         },
                                                                         "registry": {
                                                                             "type": "string",
-                                                                            "format": "enum",
                                                                             "enum": ["dockerhub"],
+                                                                            "default": "dockerhub",
                                                                             "description": "Docker registry URI for the package"
                                                                         }
                                                                     }
@@ -329,8 +329,8 @@
                                                                         },
                                                                         "registry": {
                                                                             "type": "string",
-                                                                            "format": "enum",
                                                                             "enum": ["dockerhub"],
+                                                                            "default": "dockerhub",
                                                                             "description": "Docker registry URI for the package"
                                                                         }
                                                                     }

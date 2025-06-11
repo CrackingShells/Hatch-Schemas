@@ -158,7 +158,6 @@
                             },
                             "registry": {
                                 "type": "string",
-                                "format": "enum",
                                 "enum": ["dockerhub"],
                                 "default": "dockerhub",
                                 "description": "Registry to pull the Docker image from"
