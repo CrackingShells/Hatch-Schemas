@@ -140,7 +140,7 @@ jobs:
 
       - name: Create test package schema releases
         if: needs.prepare-test-data.outputs.pkg_versions != '[]'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2.2.2
         with:
           tag_name: schemas-package-${{ needs.prepare-test-data.outputs.highest_pkg_version }}-test
           name: "[TEST] Package Schema Release ${{ needs.prepare-test-data.outputs.highest_pkg_version }}"
@@ -162,7 +162,7 @@ jobs:
 
       - name: Create test registry schema releases  
         if: needs.prepare-test-data.outputs.registry_versions != '[]'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2.2.2
         with:
           tag_name: schemas-registry-${{ needs.prepare-test-data.outputs.highest_registry_version }}-test
           name: "[TEST] Registry Schema Release ${{ needs.prepare-test-data.outputs.highest_registry_version }}"
