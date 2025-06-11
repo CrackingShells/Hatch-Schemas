@@ -83,115 +83,263 @@
                                                 "description": "Version this differential is based on (null for first version)",
                                                 "pattern": "^\\d+(\\.\\d+)*$"
                                             },
-                                            "hatch_dependencies_added": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "object",
-                                                    "required": ["name"],
-                                                    "properties": {
-                                                        "name": {
-                                                            "type": "string",
-                                                            "pattern": "^[a-z0-9_]+$",
-                                                            "description": "Name of the dependent package"
+                                            "dependency_changes" : {
+                                                "type": "object",
+                                                "properties": {
+                                                    "hatch" : {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "added": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["name", "version_constraint"],
+                                                                    "properties": {
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "pattern": "^[a-z0-9_]+$",
+                                                                            "description": "Name of the Hatch package"
+                                                                        },
+                                                                        "version_constraint": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                                                            "description": "Version constraint for the Hatch package"
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "description": "Hatch dependencies added since base_version"
+                                                            },
+                                                            "removed": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "string",
+                                                                    "pattern": "^[a-z0-9_]+$",
+                                                                    "description": "Name of a Hatch dependency that was removed from the previous version"
+                                                                },
+                                                                "description": "Names of Hatch dependencies removed since base_version"
+                                                            },
+                                                            "modified": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["name", "version_constraint"],
+                                                                    "properties": {
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\w+$",
+                                                                            "description": "Name of the Hatch package"
+                                                                        },
+                                                                        "version_constraint": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                                                            "description": "Version constraint for the Hatch package"
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "description": "Hatch dependencies with modified version constraints since base_version"
+                                                            }
                                                         },
-                                                        "version_constraint": {
-                                                            "type": "string", 
-                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
-                                                            "description": "Version constraint (e.g., '>=1.0.0', '==1.2.3')"
+                                                        "description": "Changes to Hatch dependencies since base_version"
+                                                    },
+                                                    "python" : {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "added": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["name"],
+                                                                    "properties": {
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\w+$",
+                                                                            "description": "Name of the Python package"
+                                                                        },
+                                                                        "version_constraint": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                                                            "description": "Version constraint for the Python package"
+                                                                        },
+                                                                        "package_manager": {
+                                                                            "type": "string",
+                                                                            "enum": ["pip", "conda"],
+                                                                            "default": "pip",
+                                                                            "description": "Package manager to use for installation"
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "description": "Python dependencies added since base_version"
+                                                            },
+                                                            "removed": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "string",
+                                                                    "pattern": "^\\w+$",
+                                                                    "description": "Name of a Python dependency that was removed from the previous version"
+                                                                },
+                                                                "description": "Names of Python dependencies removed since base_version"
+                                                            },
+                                                            "modified": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["name", "version_constraint"],
+                                                                    "properties": {
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\w+$",
+                                                                            "description": "Name of the Python package"
+                                                                        },
+                                                                        "version_constraint": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                                                            "description": "Version constraint for the Python package"
+                                                                        },
+                                                                        "package_manager": {
+                                                                            "type": "string",
+                                                                            "enum": ["pip", "conda"],
+                                                                            "default": "pip",
+                                                                            "description": "Package manager to use for installation"
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "description": "Python dependencies with modified version constraints since base_version"
+                                                            }
+                                                        }
+                                                    },
+                                                    "system" : {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "added" : {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["name", "version_constraint"],
+                                                                    "properties": {
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\w+$",
+                                                                            "description": "Name of the system package"
+                                                                        },
+                                                                        "version_constraint": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                                                            "description": "Version constraint for the system package"
+                                                                        },
+                                                                        "package_manager": {
+                                                                            "type": "string",
+                                                                            "enum": ["apt"],
+                                                                            "default": "apt",
+                                                                            "description": "Package manager to use for installation"
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "description": "System dependencies added since base_version"
+                                                            },
+                                                            "removed" : {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "string",
+                                                                    "pattern": "^\\w+$",
+                                                                    "description": "Name of a system dependency that was removed from the previous version"
+                                                                },
+                                                                "description": "Names of system dependencies removed since base_version"
+                                                            },
+                                                            "modified" : {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["name", "version_constraint"],
+                                                                    "properties": {
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\w+$",
+                                                                            "description": "Name of the system package"
+                                                                        },
+                                                                        "version_constraint": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                                                            "description": "Version constraint for the system package"
+                                                                        },
+                                                                        "package_manager": {
+                                                                            "type": "string",
+                                                                            "enum": ["apt"],
+                                                                            "default": "apt",
+                                                                            "description": "Package manager to use for installation"
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "description": "System dependencies with modified version constraints since base_version"
+                                                            }
+                                                        }
+                                                    },
+                                                    "docker" : {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "added" : {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["name", "version_constraint"],
+                                                                    "properties": {
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\w+$",
+                                                                            "description": "Name of the Docker package"
+                                                                        },
+                                                                        "version_constraint": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                                                            "description": "Version constraint for the Docker package"
+                                                                        },
+                                                                        "registry": {
+                                                                            "type": "string",
+                                                                            "format": "enum",
+                                                                            "enum": ["dockerhub"],
+                                                                            "description": "Docker registry URI for the package"
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "description": "Docker dependencies added since base_version"
+                                                            },
+                                                            "removed" : {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "string",
+                                                                    "pattern": "^\\w+$",
+                                                                    "description": "Name of a Docker dependency that was removed from the previous version"
+                                                                },
+                                                                "description": "Names of Docker dependencies removed since base_version"
+                                                            },
+                                                            "modified" : {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["name", "version_constraint"],
+                                                                    "properties": {
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\w+$",
+                                                                            "description": "Name of the Docker package"
+                                                                        },
+                                                                        "version_constraint": {
+                                                                            "type": "string",
+                                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                                                            "description": "Version constraint for the Docker package"
+                                                                        },
+                                                                        "registry": {
+                                                                            "type": "string",
+                                                                            "format": "enum",
+                                                                            "enum": ["dockerhub"],
+                                                                            "description": "Docker registry URI for the package"
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "description": "Docker dependencies with modified version constraints since base_version"
+                                                            }
                                                         }
                                                     }
-                                                },
-                                                "description": "Hatch dependencies added since base_version"
-                                            },
-                                            "hatch_dependencies_removed": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string",
-                                                    "pattern": "^[a-z0-9_]+$",
-                                                    "description": "Name of a dependency that was removed from the previous version"
-                                                },
-                                                "description": "Names of dependencies removed since base_version"
-                                            },
-                                            "hatch_dependencies_modified": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "object",
-                                                    "required": ["name"],
-                                                    "properties": {
-                                                        "name": {
-                                                            "type": "string",
-                                                            "pattern": "^[a-z0-9_]+$",
-                                                            "description": "Name of the dependent package"
-                                                        },
-                                                        "version_constraint": {
-                                                            "type": "string", 
-                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
-                                                            "description": "Version constraint (e.g., '>=1.0.0', '==1.2.3')"
-                                                        }
-                                                    }
-                                                },
-                                                "description": "Dependencies with modified version constraints since base_version"
-                                            },
-                                            "python_dependencies_added": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "object",
-                                                    "required": ["name"],
-                                                    "properties": {
-                                                        "name": {
-                                                            "type": "string",
-                                                            "pattern": "^[a-z0-9-]+$",
-                                                            "description": "Name of the Python package"
-                                                        },
-                                                        "version_constraint": {
-                                                            "type": "string",
-                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
-                                                            "description": "Version constraint (e.g., '>=1.0.0', '==1.2.3')"
-                                                        },
-                                                        "package_manager": {
-                                                            "type": "string",
-                                                            "enum": ["pip", "conda"],
-                                                            "default": "pip",
-                                                            "description": "Package manager to use for installation"
-                                                        }
-                                                    }
-                                                },
-                                                "description": "Python dependencies added since base_version"
-                                            },
-                                            "python_dependencies_removed": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string",
-                                                    "pattern": "^[a-z0-9-]+$",
-                                                    "description": "Name of a Python dependency that was removed from the previous version"
-                                                },
-                                                "description": "Names of Python dependencies removed since base_version"
-                                            },
-                                            "python_dependencies_modified": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "object",
-                                                    "required": ["name"],
-                                                    "properties": {
-                                                        "name": {
-                                                            "type": "string",
-                                                            "pattern": "^[a-z0-9-]+$",
-                                                            "description": "Name of the Python package"
-                                                        },
-                                                        "version_constraint": {
-                                                            "type": "string",
-                                                            "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
-                                                            "description": "Version constraint (e.g., '>=1.0.0', '==1.2.3')"
-                                                        },
-                                                        "package_manager": {
-                                                            "type": "string",
-                                                            "enum": ["pip", "conda"],
-                                                            "default": "pip",
-                                                            "description": "Package manager to use for installation"
-                                                        }
-                                                    }
-                                                },
-                                                "description": "Python dependencies with modified version constraints since base_version"
+                                                }
                                             },
                                             "compatibility_changes": {
                                                 "type": "object",
