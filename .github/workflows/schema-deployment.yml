@@ -1,8 +1,11 @@
 name: Schema Deployment
 
-# This workflow handles the deployment of schemas.
-# Schema validation occurs in a separate workflow (schema-validation.yml) that runs on pull requests.
-# This ensures schemas are already validated before they reach this deployment workflow.
+# This workflow handles the deployment of schemas via GitHub Releases.
+# Schemas are validated and then published as GitHub releases with direct file attachments.
+# This provides multiple access patterns:
+# - Direct raw file access via raw.githubusercontent.com URLs
+# - Release-based downloads with metadata
+# - GitHub API access for programmatic discovery
 
 on:
   push:
@@ -33,23 +36,16 @@ on:
 
 permissions:
   contents: write    # For GitHub Releases
-  pages: write       # For GitHub Pages deployment
-  id-token: write    # Required for Pages deployment
-
-# Ensure we can deploy to GitHub Pages
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 jobs:
-  detect-versions:
+  detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      pkg_versions: ${{ steps.get-versions.outputs.pkg_versions }}
-      registry_versions: ${{ steps.get-versions.outputs.registry_versions }}
-      highest_pkg_version: ${{ steps.get-versions.outputs.highest_pkg_version }}
-      highest_registry_version: ${{ steps.get-versions.outputs.highest_registry_version }}
-      no-changes: ${{ steps.changed-files.outputs.all_changed_files == '' && (github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force != 'true')) }}
+      pkg_versions: ${{ steps.extract-versions.outputs.pkg_versions }}
+      registry_versions: ${{ steps.extract-versions.outputs.registry_versions }}
+      highest_pkg_version: ${{ steps.extract-versions.outputs.highest_pkg_version }}
+      highest_registry_version: ${{ steps.extract-versions.outputs.highest_registry_version }}
+      has_changes: ${{ steps.extract-versions.outputs.has_changes }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -58,132 +54,169 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             package/v*/**
             registry/v*/**
 
-      - name: Stop if no changes detected
-        if: steps.changed-files.outputs.all_changed_files == '' && (github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force != 'true'))
+      - name: Extract versions from changed files
+        id: extract-versions
         run: |
-          echo "No changes detected in package or registry schemas and force is not enabled. Exiting..."
-          exit 0
-
-      - name: Detect versions from changed files
-        id: get-versions
-        run: |
-          # Make scripts executable
-          chmod +x ./scripts/detect_versions.sh
-          
-          # Use the script to detect versions from changed files
-          echo "Running version detection..."
-          
+          # Handle workflow_dispatch with force
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force }}" == "true" ]]; then
-            echo "Force deployment enabled. Using provided versions."
-            PKG_VERSION="${{ github.event.inputs.pkg_schema_version }}"
-            REG_VERSION="${{ github.event.inputs.registry_schema_version }}"
-            
-            # Create JSON arrays for each schema type
-            echo "pkg_versions=[\"$PKG_VERSION\"]" >> $GITHUB_OUTPUT
-            echo "registry_versions=[\"$REG_VERSION\"]" >> $GITHUB_OUTPUT
-            echo "highest_pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
-            echo "highest_registry_version=$REG_VERSION" >> $GITHUB_OUTPUT
-          else
-            # Process changed files to detect versions
-            ./scripts/detect_versions.sh ${{ steps.changed-files.outputs.all_changed_files }}
+            echo "pkg_versions=[\"${{ github.event.inputs.pkg_schema_version }}\"]" >> $GITHUB_OUTPUT
+            echo "registry_versions=[\"${{ github.event.inputs.registry_schema_version }}\"]" >> $GITHUB_OUTPUT
+            echo "highest_pkg_version=${{ github.event.inputs.pkg_schema_version }}" >> $GITHUB_OUTPUT
+            echo "highest_registry_version=${{ github.event.inputs.registry_schema_version }}" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            exit 0
           fi
-  build-deploy:
-    if: needs.detect-versions.outputs.no-changes == 'false'
-    needs: [detect-versions]
+
+          # Use tj-actions/changed-files with matrix to get versions
+          changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
+          
+          # Extract unique versions using simple regex
+          pkg_versions=$(echo "$changed_files" | grep -oE 'package/v[0-9]+(\.[0-9]+)*' | cut -d'/' -f2 | sort -u | jq -R . | jq -s .)
+          registry_versions=$(echo "$changed_files" | grep -oE 'registry/v[0-9]+(\.[0-9]+)*' | cut -d'/' -f2 | sort -u | jq -R . | jq -s .)
+          
+          # Handle empty arrays
+          if [[ "$pkg_versions" == "[null]" ]]; then pkg_versions="[]"; fi
+          if [[ "$registry_versions" == "[null]" ]]; then registry_versions="[]"; fi
+          
+          # Find highest versions
+          highest_pkg=$(echo "$pkg_versions" | jq -r '.[]' | sort -V | tail -n1)
+          highest_registry=$(echo "$registry_versions" | jq -r '.[]' | sort -V | tail -n1)
+          
+          # Set outputs
+          echo "pkg_versions=$pkg_versions" >> $GITHUB_OUTPUT
+          echo "registry_versions=$registry_versions" >> $GITHUB_OUTPUT
+          echo "highest_pkg_version=$highest_pkg" >> $GITHUB_OUTPUT
+          echo "highest_registry_version=$highest_registry" >> $GITHUB_OUTPUT
+          
+          # Check if we have changes
+          if [[ "$pkg_versions" != "[]" ]] || [[ "$registry_versions" != "[]" ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+  validate-schemas:
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    needs: [detect-changes]
     runs-on: ubuntu-latest
-    env:
-      PKG_VERSIONS: ${{ needs.detect-versions.outputs.pkg_versions }}
-      REGISTRY_VERSIONS: ${{ needs.detect-versions.outputs.registry_versions }}
-      HIGHEST_PKG_VERSION: ${{ needs.detect-versions.outputs.highest_pkg_version }}
-      HIGHEST_REGISTRY_VERSION: ${{ needs.detect-versions.outputs.highest_registry_version }}
+    strategy:
+      matrix:
+        schema-type: [package, registry]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Display version information
-        run: | 
-          echo "Deploying package versions: $PKG_VERSIONS with highest package version: $HIGHEST_PKG_VERSION"
-          echo "Deploying registry versions: $REGISTRY_VERSIONS with highest registry version: $HIGHEST_REGISTRY_VERSION"
+      - name: Setup Node.js for schema validation
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
-      - name: Package schemas
-        run: |
-          # Make scripts executable
-          chmod +x ./scripts/package_schemas.sh
-          
-          # Package schemas using the package_schemas.sh script
-          echo "Packaging schemas for release..."
-          ./scripts/package_schemas.sh ./artifacts "$PKG_VERSIONS" "$REGISTRY_VERSIONS" "${{ github.sha }}"
+      - name: Install AJV for validation
+        run: npm install -g ajv-cli ajv-formats
 
-      - name: Create GitHub releases
+      - name: Validate schemas
         run: |
-          # Make scripts executable
-          chmod +x ./scripts/create_releases.sh
+          schema_type="${{ matrix.schema-type }}"
+          if [[ "$schema_type" == "package" ]]; then
+            versions='${{ needs.detect-changes.outputs.pkg_versions }}'
+            file_name="hatch_pkg_metadata_schema.json"
+          else
+            versions='${{ needs.detect-changes.outputs.registry_versions }}'
+            file_name="hatch_all_pkg_metadata_schema.json"
+          fi
           
-          # Create releases using the create_releases.sh script
-          echo "Creating GitHub releases..."
-          ./scripts/create_releases.sh ./artifacts "$PKG_VERSIONS" "$REGISTRY_VERSIONS"
+          if [[ "$versions" == "[]" ]]; then
+            echo "No $schema_type schema changes detected, skipping validation"
+            exit 0
+          fi
+          
+          echo "Validating $schema_type schemas for versions: $versions"
+          for version in $(echo "$versions" | jq -r '.[]'); do
+            schema_file="$schema_type/$version/$file_name"
+            if [[ -f "$schema_file" ]]; then
+              echo "Validating: $schema_file"
+              ajv compile -s "$schema_file" --spec=draft7 -c ajv-formats
+            else
+              echo "Error: Schema file not found at $schema_file"
+              exit 1
+            fi
+          done
+
+  deploy-releases:
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    needs: [detect-changes, validate-schemas]
+    runs-on: ubuntu-latest
+    env:
+      PKG_VERSIONS: ${{ needs.detect-changes.outputs.pkg_versions }}
+      REGISTRY_VERSIONS: ${{ needs.detect-changes.outputs.registry_versions }}
+      HIGHEST_PKG_VERSION: ${{ needs.detect-changes.outputs.highest_pkg_version }}
+      HIGHEST_REGISTRY_VERSION: ${{ needs.detect-changes.outputs.highest_registry_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Display deployment information
+        if: needs.detect-changes.outputs.pkg_versions != '[]'
+        uses: softprops/action-gh-release@v2.2.2
+        with:
+          tag_name: schemas-package-${{ needs.detect-changes.outputs.highest_pkg_version }}
+          name: Package Schema Release ${{ needs.detect-changes.outputs.highest_pkg_version }}
+          body: |
+            Package schema version ${{ needs.detect-changes.outputs.highest_pkg_version }} released on ${{ github.event.head_commit.timestamp }}
+            
+            **Changed Versions:** ${{ needs.detect-changes.outputs.pkg_versions }}
+            **Commit:** ${{ github.sha }}
+          files: |
+            package/${{ needs.detect-changes.outputs.highest_pkg_version }}/*
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Configure GitHub Pages deployment
-      - name: Setup Pages
-        id: pages
-        uses: actions/configure-pages@v5
-
-      # Update the "latest" pointer in a minimal GitHub Pages site
-      - name: Prepare GitHub Pages content
-        run: |
-          # Make scripts executable
-          chmod +x ./scripts/generate_gh_pages.sh
-          
-          # Generate the GitHub Pages content with our script
-          echo "Generating GitHub Pages content..."
-          ./scripts/generate_gh_pages.sh ./gh-pages-content "$HIGHEST_PKG_VERSION" "$HIGHEST_REGISTRY_VERSION" "${{ github.repository }}"
-
-      - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Create registry schema releases  
+        if: needs.detect-changes.outputs.registry_versions != '[]'
+        uses: softprops/action-gh-release@v2.2.2
         with:
-          path: gh-pages-content
+          tag_name: schemas-registry-${{ needs.detect-changes.outputs.highest_registry_version }}
+          name: Registry Schema Release ${{ needs.detect-changes.outputs.highest_registry_version }}
+          body: |
+            Registry schema version ${{ needs.detect-changes.outputs.highest_registry_version }} released on ${{ github.event.head_commit.timestamp }}
+            
+            **Changed Versions:** ${{ needs.detect-changes.outputs.registry_versions }}
+            **Commit:** ${{ github.sha }}
+          files: |
+            registry/${{ needs.detect-changes.outputs.highest_registry_version }}/*
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Generate URLs for documentation
+      - name: Generate deployment summary
         run: |
-          echo "Schema releases created and deployed!"
-          echo ""
-          echo "URLs for each version:"
+          echo "## Schema Deployment Complete! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Get the package versions as an array
-          PKG_VERSIONS_ARRAY=$(echo $PKG_VERSIONS | jq -r '.[]')
+          if [[ "$PKG_VERSIONS" != "[]" ]]; then
+            echo "### Package Schema Releases" >> $GITHUB_STEP_SUMMARY
+            pkg_versions='${{ needs.detect-changes.outputs.pkg_versions }}'
+            for version in $(echo "$pkg_versions" | jq -r '.[]'); do
+              echo "- **$version**: [Release](https://github.com/${{ github.repository }}/releases/tag/schemas-package-$version) | [Raw Schema](https://raw.githubusercontent.com/${{ github.repository }}/main/package/$version/hatch_pkg_metadata_schema.json)" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
           
-          # Report URLs for each package version
-          for VERSION in $PKG_VERSIONS_ARRAY; do
-            echo "Package Version $VERSION:"
-            echo "- Download: https://github.com/${{ github.repository }}/releases/download/schemas-package-$VERSION/schemas-package-$VERSION.zip"
-          done
+          if [[ "$REGISTRY_VERSIONS" != "[]" ]]; then
+            echo "### Registry Schema Releases" >> $GITHUB_STEP_SUMMARY
+            registry_versions='${{ needs.detect-changes.outputs.registry_versions }}'
+            for version in $(echo "$registry_versions" | jq -r '.[]'); do
+              echo "- **$version**: [Release](https://github.com/${{ github.repository }}/releases/tag/schemas-registry-$version) | [Raw Schema](https://raw.githubusercontent.com/${{ github.repository }}/main/registry/$version/hatch_all_pkg_metadata_schema.json)" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
           
-          # Get the registry versions as an array
-          REGISTRY_VERSIONS_ARRAY=$(echo $REGISTRY_VERSIONS | jq -r '.[]')
-          
-          # Report URLs for each registry version
-          for VERSION in $REGISTRY_VERSIONS_ARRAY; do
-            echo "Registry Version $VERSION:"
-            echo "- Download: https://github.com/${{ github.repository }}/releases/download/schemas-registry-$VERSION/schemas-registry-$VERSION.zip"
-          done
-          
-          echo ""
-          echo "Latest version pointers:"
-          echo "- Web: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-          echo "- API: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/latest.json"
-          echo ""
-          echo "Direct schema URLs (always current):"
-          echo "- Package: https://raw.githubusercontent.com/${{ github.repository }}/main/package/$HIGHEST_PKG_VERSION/hatch_pkg_metadata_schema.json"
-          echo "- Registry: https://raw.githubusercontent.com/${{ github.repository }}/main/registry/$HIGHEST_REGISTRY_VERSION/hatch_all_pkg_metadata_schema.json"
+          echo "### Latest Versions" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: $HIGHEST_PKG_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: $HIGHEST_REGISTRY_VERSION" >> $GITHUB_STEP_SUMMARY
