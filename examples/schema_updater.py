@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-"""
-Schema Update Checker Example
+"""Schema retrieval and caching utility for Hatch schemas.
 
-This script demonstrates how to:
-1. Check for the latest schema version for each schema type
-2. Compare with a locally cached version
-3. Download the latest schema if needed
+This module provides utilities for:
+1. Discovering latest schema versions via GitHub API
+2. Downloading schemas directly from GitHub releases
+3. Caching schemas locally for offline use
+4. Validating schema updates and version management
 """
 
 import os
@@ -15,25 +14,25 @@ import logging
 import requests
 from pathlib import Path
 from datetime import datetime
-import tempfile
-import zipfile
+from typing import Dict, Optional, Any
 
 # Configure logging
 logger = logging.getLogger("schema_updater")
 logger.setLevel(logging.INFO)
 
 # Configuration
-SCHEMA_INFO_URL = "https://crackingshells.github.io/Hatch-Schemas/latest.json"
+GITHUB_API_BASE = "https://api.github.com/repos/crackingshells/Hatch-Schemas"
+GITHUB_RELEASES_BASE = "https://github.com/crackingshells/Hatch-Schemas/releases/download"
 CACHE_DIR = Path.home() / ".crackingshells" / "schemas"
 CACHE_INFO_FILE = CACHE_DIR / "schema_info.json"
 
 
-def configure_logger(level=logging.INFO, log_file=None):
+def configure_logger(level: int = logging.INFO, log_file: Optional[str] = None) -> None:
     """Configure the logger with custom settings.
     
     Args:
-        level: The logging level (e.g., logging.DEBUG, logging.INFO)
-        log_file: Optional path to a log file
+        level: The logging level (e.g., logging.DEBUG, logging.INFO).
+        log_file (optional): Path to a log file. Defaults to None.
     """
     logger.setLevel(level)
     
@@ -53,21 +52,57 @@ def configure_logger(level=logging.INFO, log_file=None):
         logger.addHandler(file_handler)
 
 
-def get_latest_schema_info():
-    """Fetch information about the latest schema versions."""
+def get_latest_schema_info() -> Optional[Dict[str, Any]]:
+    """Get latest schema version information from GitHub API.
+    
+    Returns:
+        Dict containing latest schema information, or None if unavailable.
+    """
     try:
-        logger.debug(f"Requesting schema info from {SCHEMA_INFO_URL}")
-        response = requests.get(SCHEMA_INFO_URL, timeout=10)
+        logger.debug(f"Requesting releases from {GITHUB_API_BASE}/releases")
+        response = requests.get(f"{GITHUB_API_BASE}/releases", timeout=10)
         response.raise_for_status()
+        releases = response.json()
+        
+        # Extract latest versions for each schema type
+        latest_schemas = {
+            "updated_at": datetime.utcnow().isoformat() + "Z"
+        }
+        
+        for release in releases:
+            tag = release['tag_name']
+            if tag.startswith('schemas-package-'):
+                if 'latest_package_version' not in latest_schemas:
+                    version = tag.replace('schemas-package-', '')
+                    latest_schemas['latest_package_version'] = version
+                    latest_schemas['package'] = {
+                        'version': version,
+                        'url': f"{GITHUB_RELEASES_BASE}/schemas-package-{version}/hatch_pkg_metadata_schema.json",
+                        'release_url': release['html_url']
+                    }
+            elif tag.startswith('schemas-registry-'):
+                if 'latest_registry_version' not in latest_schemas:
+                    version = tag.replace('schemas-registry-', '')
+                    latest_schemas['latest_registry_version'] = version
+                    latest_schemas['registry'] = {
+                        'version': version,
+                        'url': f"{GITHUB_RELEASES_BASE}/schemas-registry-{version}/hatch_all_pkg_metadata_schema.json",
+                        'release_url': release['html_url']
+                    }
+        
         logger.debug("Schema info retrieved successfully")
-        return response.json()
+        return latest_schemas
     except requests.RequestException as e:
         logger.error(f"Error fetching schema info: {e}")
         return None
 
 
-def get_cached_schema_info():
-    """Get information about the locally cached schema versions."""
+def get_cached_schema_info() -> Optional[Dict[str, Any]]:
+    """Get information about the locally cached schema versions.
+    
+    Returns:
+        Dict containing cached schema information, or None if unavailable.
+    """
     if not CACHE_INFO_FILE.exists():
         logger.debug("No cached schema info found")
         return None
@@ -81,79 +116,57 @@ def get_cached_schema_info():
         return None
 
 
-def download_and_extract_schema(schema_type, download_url):
-    """Download and extract schema files to the cache directory for a specific schema type.
+def download_schema_file(schema_type: str, schema_url: str) -> bool:
+    """Download a schema file directly from the raw URL.
     
     Args:
-        schema_type: Either "package" or "registry"
-        download_url: URL to download the schema ZIP archive
+        schema_type: Either "package" or "registry".
+        schema_url: Direct URL to the schema JSON file.
+        
+    Returns:
+        bool: True if download was successful, False otherwise.
     """
     try:
-        # Create a temporary file to download to
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as temp_file:
-            temp_path = temp_file.name
-        
-        # Download the schema zip
-        logger.info(f"Downloading {schema_type} schema from {download_url}")
-        response = requests.get(download_url, stream=True, timeout=30)
-        response.raise_for_status()
-        
-        # Save to temporary file
-        with open(temp_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        
-        # Clear existing cache directory for this schema type
-        schema_cache_dir = CACHE_DIR / schema_type
-        if schema_cache_dir.exists():
-            logger.debug(f"Clearing existing cache directory: {schema_cache_dir}")
-            shutil.rmtree(schema_cache_dir)
-        
         # Create schema type directory
+        schema_cache_dir = CACHE_DIR / schema_type
         schema_cache_dir.mkdir(parents=True, exist_ok=True)
         
-        with zipfile.ZipFile(temp_path, 'r') as zip_ref:
-            logger.debug(f"Extracting {schema_type} schema to {schema_cache_dir}")
-            zip_ref.extractall(schema_cache_dir)
-            
-            # Find the version directory in the extracted content
-            extracted_dirs = [d for d in os.listdir(schema_cache_dir) if os.path.isdir(os.path.join(schema_cache_dir, d))]
-            if extracted_dirs:
-                version_dir = extracted_dirs[0]
-                extracted_version_path = os.path.join(schema_cache_dir, version_dir)
-                
-                logger.debug(f"Restructuring extracted content from {version_dir} directory")
-                # Move the contents up one level (from cache_dir/package/v1/... to cache_dir/package/...)
-                for item in os.listdir(extracted_version_path):
-                    target_path = os.path.join(schema_cache_dir, item)
-                    source_path = os.path.join(extracted_version_path, item)
-                    
-                    # Remove existing file/directory if it exists
-                    if os.path.exists(target_path):
-                        if os.path.isdir(target_path):
-                            shutil.rmtree(target_path)
-                        else:
-                            os.remove(target_path)
-                    
-                    # Move the item
-                    shutil.move(source_path, target_path)
-                
-                # Remove the now-empty version directory
-                if os.path.exists(extracted_version_path):
-                    shutil.rmtree(extracted_version_path)
+        # Determine filename based on schema type
+        if schema_type == "package":
+            filename = "hatch_pkg_metadata_schema.json"
+        elif schema_type == "registry":
+            filename = "hatch_all_pkg_metadata_schema.json"
+        else:
+            logger.error(f"Unknown schema type: {schema_type}")
+            return False
         
-        # Clean up the temporary file
-        os.unlink(temp_path)
-        logger.debug(f"{schema_type.capitalize()} schema extraction completed successfully")
+        # Download the schema file
+        logger.info(f"Downloading {schema_type} schema from {schema_url}")
+        response = requests.get(schema_url, timeout=30)
+        response.raise_for_status()
         
+        # Save to cache
+        schema_path = schema_cache_dir / filename
+        with open(schema_path, "w") as f:
+            json.dump(response.json(), f, indent=2)
+        
+        logger.debug(f"{schema_type.capitalize()} schema saved to {schema_path}")
         return True
+        
     except Exception as e:
-        logger.error(f"Error downloading {schema_type} schema: {e}", exc_info=True)
+        logger.error(f"Error downloading {schema_type} schema: {e}")
         return False
 
 
-def update_cache_info(schema_info):
-    """Update the cached schema information."""
+def update_cache_info(schema_info: Dict[str, Any]) -> bool:
+    """Update the cached schema information.
+    
+    Args:
+        schema_info: Dictionary containing schema information to cache.
+        
+    Returns:
+        bool: True if update was successful, False otherwise.
+    """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     
     try:
@@ -166,8 +179,12 @@ def update_cache_info(schema_info):
         return False
 
 
-def check_and_update_schemas():
-    """Check if new schema versions are available and update if needed."""
+def check_and_update_schemas() -> bool:
+    """Check if new schema versions are available and update if needed.
+    
+    Returns:
+        bool: True if any schemas were updated, False otherwise.
+    """
     # Get info about the latest available schemas
     latest_info = get_latest_schema_info()
     if not latest_info:
@@ -212,10 +229,10 @@ def check_and_update_schemas():
         
         # Update schema if needed
         if needs_update:
-            download_url = latest_info.get(schema_type, {}).get("download_url")
-            if download_url:
+            schema_url = latest_info.get(schema_type, {}).get("url")
+            if schema_url:
                 logger.info(f"New {schema_type} schema version available: {latest_version}")
-                if download_and_extract_schema(schema_type, download_url):
+                if download_schema_file(schema_type, schema_url):
                     updated = True
                     logger.info(f"{schema_type.capitalize()} schema updated successfully.")
                 else:
@@ -230,53 +247,56 @@ def check_and_update_schemas():
     return updated
 
 
-def load_schema(schema_type="package"):
-    """Load a schema from the cache.
+def load_schema(schema_type: str = "package", version: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Load a schema from the cache or download if needed.
     
     Args:
-        schema_type: Either "package" or "registry"
+        schema_type: Either "package" or "registry". Defaults to "package".
+        version (optional): Specific version to load. If None, loads latest version.
         
     Returns:
-        The schema as a dictionary, or None if not available
+        Dict containing the schema, or None if unavailable.
+        
+    Raises:
+        ValueError: If schema_type is not "package" or "registry".
     """
-    # Ensure schemas are up to date
-    check_and_update_schemas()
-    
-    # Get the cached schema info to determine current version
-    cached_info = get_cached_schema_info()
-    if not cached_info:
-        logger.warning("No cached schema information available.")
-        return None
-    
-    # Get the specific schema info
-    schema_info = cached_info.get(schema_type, {})
-    if not schema_info:
-        logger.warning(f"No {schema_type} schema information available in the cache.")
-        return None
-    
-    # Get the schema version
-    version = schema_info.get("version")
-    if not version:
-        version_key = f"latest_{schema_type}_version"
-        version = cached_info.get(version_key)
-        if not version:
-            logger.error(f"No version information for {schema_type} schema in cached schema info")
+    if schema_type not in ["package", "registry"]:
+        raise ValueError(f"Unknown schema type: {schema_type}")
+      # If specific version requested, try to load directly from GitHub releases
+    if version is not None:
+        # Ensure version has 'v' prefix
+        if not version.startswith('v'):
+            version = f"v{version}"
+        
+        # Determine schema filename and release tag
+        if schema_type == "package":
+            filename = "hatch_pkg_metadata_schema.json"
+            release_tag = f"schemas-package-{version}"
+        else:
+            filename = "hatch_all_pkg_metadata_schema.json"
+            release_tag = f"schemas-registry-{version}"
+        
+        # Try to download specific version from release
+        schema_url = f"{GITHUB_RELEASES_BASE}/{release_tag}/{filename}"
+        try:
+            logger.debug(f"Loading {schema_type} schema version {version} from {schema_url}")
+            response = requests.get(schema_url, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            logger.error(f"Error loading {schema_type} schema version {version}: {e}")
             return None
     
-    # Ensure version has 'v' prefix
-    if not version.startswith('v'):
-        version = f"v{version}"
+    # For latest version, ensure schemas are up to date
+    check_and_update_schemas()
     
     # Determine schema filename based on type
     if schema_type == "package":
         schema_filename = "hatch_pkg_metadata_schema.json"
-    elif schema_type == "registry":
-        schema_filename = "hatch_all_pkg_metadata_schema.json"
     else:
-        logger.error(f"Unknown schema type: {schema_type}")
-        raise ValueError(f"Unknown schema type: {schema_type}")
+        schema_filename = "hatch_all_pkg_metadata_schema.json"
     
-    # Load and return the schema
+    # Load from cache
     schema_path = CACHE_DIR / schema_type / schema_filename
     if schema_path.exists():
         try:
