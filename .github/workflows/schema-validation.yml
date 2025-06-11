@@ -83,12 +83,12 @@ jobs:
           fi
           
           # Extract unique versions using simple regex
-          pkg_versions=$(echo "$changed_files" | grep -oE 'package/v[0-9]+(\.[0-9]+)*' | cut -d'/' -f2 | sort -u | jq -R . | jq -s .)
-          registry_versions=$(echo "$changed_files" | grep -oE 'registry/v[0-9]+(\.[0-9]+)*' | cut -d'/' -f2 | sort -u | jq -R . | jq -s .)
+          pkg_versions=$(echo "$changed_files" | grep -oE 'package/v[0-9]+(\.[0-9]+)*' | cut -d'/' -f2 | sort -u | jq -R -c . | jq -s -c .)
+          registry_versions=$(echo "$changed_files" | grep -oE 'registry/v[0-9]+(\.[0-9]+)*' | cut -d'/' -f2 | sort -u | jq -R -c . | jq -s -c .)
           
           # Handle empty arrays
-          if [[ "$pkg_versions" == "[null]" ]]; then pkg_versions="[]"; fi
-          if [[ "$registry_versions" == "[null]" ]]; then registry_versions="[]"; fi
+          if [[ "$pkg_versions" == "[null]" ]] || [[ -z "$pkg_versions" ]]; then pkg_versions="[]"; fi
+          if [[ "$registry_versions" == "[null]" ]] || [[ -z "$registry_versions" ]]; then registry_versions="[]"; fi
           
           # Find highest versions
           highest_pkg=$(echo "$pkg_versions" | jq -r '.[]' | sort -V | tail -n1)
