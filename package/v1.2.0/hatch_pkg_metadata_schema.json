@@ -76,8 +76,8 @@
                         "properties": {
                             "name": {
                                 "type": "string",
-                                "pattern": "^[a-z0-9_]+$",
-                                "description": "Name of the Hatch package"
+                                "pattern": "^[A-Za-z0-9_\\-./\\\\:]+$",
+                                "description": "Name of the Hatch package. The name can match an absolute or relative path for local packages. If it is a relative path, it is relative to the package's root directory. For remote packages (i.e. Hatch registry), a single name or, to remove ambiguity, the name prepended with the repository name, e.g., '<hatch-repo-name>:<package-name>'."
                             },
                             "version_constraint": {
                                 "type": "string",
@@ -96,8 +96,8 @@
                         "properties": {
                             "name": {
                                 "type": "string",
-                                "pattern": "^\\w+$",
-                                "description": "Name of the Python package"
+                                "pattern": "^[\\w\\-./\\\\]+$",
+                                "description": "Name of the Python package. The name can match an absolute or relative path to a directory to a local package. If it is a relative path, it is relative to the package's root directory."
                             },
                             "version_constraint": {
                                 "type": "string",
