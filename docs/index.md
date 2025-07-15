@@ -1,6 +1,22 @@
 # Hatch Schemas Documentation
 
+This article is about:
+- Overview of Hatch Schemas documentation structure
+- Navigation to user and developer resources
+- Quick access to schema references and guides
+
+You will learn about:
+- How to navigate the documentation
+- Where to find specific information for your role
+- Available resources for different use cases
+
 Welcome to the documentation for Hatch Schemas, the JSON schema library for the CrackingShells package ecosystem.
+
+## Quick Navigation
+
+- **[Table of Contents](articles/table_of_contents.md)** - Complete documentation index
+- **[Getting Started](articles/users/GettingStarted.md)** - New user introduction
+- **[Contributing](articles/devs/Contributing.md)** - Developer contribution guide
 
 ## Overview
 
@@ -9,18 +25,28 @@ The Hatch Schemas project provides standardized JSON schemas for validating meta
 - **Package Schema**: For validating individual package metadata files
 - **Registry Schema**: For validating the central package registry
 
-## Documentation Contents
+## Documentation Structure
 
-### Schema Documentation
+### User Documentation
+- [Getting Started](articles/users/GettingStarted.md) - Introduction and quick start
+- [Schema Access](articles/users/SchemaAccess.md) - How to access and reference schemas
+- [Schema Validation](articles/users/SchemaValidation.md) - Validation tools and techniques
+- [Programmatic Usage](articles/users/ProgrammaticUsage.md) - Integration patterns
 
-- [Package Schema Documentation](package/overview.md)
-- [Registry Schema Documentation](registry/overview.md)
+### Schema References
+- [Package Schema Overview](articles/users/PackageSchema/Overview.md)
+- [Package Schema Fields](articles/users/PackageSchema/Fields.md)
+- [Registry Schema Overview](articles/users/RegistrySchema/Overview.md)
+- [Registry Schema Fields](articles/users/RegistrySchema/Fields.md)
 
-### Usage Guides
+### Developer Documentation
+- [Contributing Guidelines](articles/devs/Contributing.md)
+- [Development Setup](articles/devs/DevelopmentSetup.md)
+- [Repository Structure](articles/devs/RepositoryStructure.md)
+- [Schema Versioning](articles/devs/SchemaVersioning.md)
 
-- [Schema Access](usage/access.md)
-- [Schema Validation](usage/validation.md)
-- [Programmatic Usage](usage/programmatic.md)
+### Supporting Information
+- [Glossary](articles/appendices/glossary.md) - Key terms and definitions
 
 ## Current Schema Versions
 
