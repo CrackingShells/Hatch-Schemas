@@ -1,8 +1,16 @@
-# Registry Schema Documentation
+# Registry Schema Overview
 
-## Overview
+This article is about:
+- Structure and purpose of the Registry Schema
+- Central catalog organization and validation
+- Registry maintenance and update processes
 
-The Registry Schema (`hatch_all_pkg_metadata_schema.json`) defines the structure for the central package registry in the Hatch ecosystem. This schema is used to maintain a comprehensive, searchable catalog of all available packages across CrackingShells repositories.
+You will learn about:
+- How the registry maintains package catalogs
+- Required fields for registry compliance
+- Package versioning and verification workflows
+
+The Registry Schema (`hatch_all_pkg_metadata_schema.json`) defines the structure for the central package registry in the Hatch ecosystem.
 
 > [!Note]
 > The registry is being maintained internally. It is modified by specific functions, and updated during package submission process. In principle, there **MUST NOT** be any manual modification of the registry to add a package. Although, highly discouraged, there **MAY** be manual modification by core members of the organization in case of errors.
@@ -20,7 +28,7 @@ The Registry Schema includes the following major sections:
 - **Packages**: Package information including name, description, tags, and versions
 - **Version Information**: Details about each version of a package, including author, release location, and verification status
 
-For detailed field-by-field documentation including types, formats, and examples, see the [Registry Schema Field Reference](fields.md).
+For detailed field-by-field documentation including types, formats, and examples, see the [Registry Schema Field Reference](Fields.md).
 - **verification**: Verification status and metadata
 - **dependency_changes**: Changes to dependencies since the base version
 - **compatibility_changes**: Changes to compatibility requirements
@@ -76,5 +84,6 @@ For detailed field-by-field documentation including types, formats, and examples
 
 ## See Also
 
-- [Package Schema](../package/overview.md)
-- [Schema Validation Guide](../usage/validation.md)
+- [Registry Schema Field Reference](Fields.md)
+- [Package Schema Overview](../PackageSchema/Overview.md)
+- [Schema Validation Guide](../SchemaValidation.md)

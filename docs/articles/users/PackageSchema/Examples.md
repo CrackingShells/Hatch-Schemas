@@ -1,5 +1,15 @@
 # Package Schema Examples
 
+This article is about:
+- Real-world examples of valid package metadata files
+- Common patterns and use cases for package schemas
+- Best practices for structuring package metadata
+
+You will learn about:
+- How to create valid package metadata files
+- Examples ranging from simple to comprehensive packages
+- Common field combinations and patterns
+
 This document provides examples of valid package metadata files compliant with the Hatch Package Schema.
 
 ## Basic Example
@@ -116,5 +126,5 @@ This document provides examples of valid package metadata files compliant with t
 
 ## See Also
 
-- [Package Schema Field Reference](fields.md)
-- [Registry Schema Examples](../registry/examples.md)
+- [Package Schema Field Reference](Fields.md)
+- [Package Schema Overview](Overview.md)

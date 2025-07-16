@@ -1,5 +1,15 @@
 # Package Schema Field Reference
 
+This article is about:
+- Detailed specifications for each field in the Package Schema
+- Data types, formats, and validation rules
+- Examples and usage patterns for schema fields
+
+You will learn about:
+- Required and optional field definitions
+- Proper formatting for each field type
+- How to structure complex fields like dependencies
+
 This document provides detailed information about each field in the Package Schema.
 
 ## Required Fields

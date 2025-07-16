@@ -1,10 +1,20 @@
 # Schema Access Guide
 
-This guide explains how to access and use the Hatch Schemas in your projects.
+This article is about:
+- Methods for accessing Hatch Schemas
+- Distribution channels and usage patterns
+- Integration approaches for different scenarios
+
+You will learn about:
+- How to access schemas via GitHub, releases, and API
+- How to reference schemas in your JSON files
+- How to implement local caching strategies
+
+Hatch Schemas are distributed through multiple channels to support various access patterns and use cases.
 
 ## Distribution Methods
 
-Hatch Schemas are distributed through multiple channels:
+Hatch Schemas are available through:
 
 1. **GitHub Repository** - Direct access to schema files via raw.githubusercontent.com
 2. **GitHub Releases** - Versioned releases with metadata and direct downloads
@@ -14,7 +24,7 @@ Hatch Schemas are distributed through multiple channels:
 
 ### Manual Discovery
 
-You can visit the release page: https://github.com/CrackingShells/Hatch-Schemas/releases
+Visit the release page: https://github.com/CrackingShells/Hatch-Schemas/releases
 
 ### Release Downloads
 
@@ -36,12 +46,11 @@ https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/package/v1.2
 https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/registry/v1.2.0/hatch_all_pkg_metadata_schema.json
 ```
 
-
 ## Using Schemas in Your Project
 
 ### Referencing in JSON Files
 
-You can reference these schemas in your JSON files using the `$schema` property:
+Reference schemas in your JSON files using the `$schema` property:
 
 ```json
 {
@@ -77,5 +86,5 @@ update_schemas()
 
 ## See Also
 
-- [Schema Validation](validation.md)
-- [Programmatic Usage](programmatic.md)
+- [Schema Validation](SchemaValidation.md)
+- [Programmatic Usage](ProgrammaticUsage.md)

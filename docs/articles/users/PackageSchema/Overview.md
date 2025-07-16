@@ -1,8 +1,16 @@
-# Package Schema Documentation
+# Package Schema Overview
 
-## Overview
+This article is about:
+- Structure and purpose of the Package Schema
+- Core components and validation rules
+- Usage patterns for package metadata
 
-The Package Schema (`hatch_pkg_metadata_schema.json`) defines the structure for individual package metadata files in the Hatch ecosystem. This schema ensures consistency and validity of package metadata across the ecosystem.
+You will learn about:
+- How to structure valid package metadata
+- Required and optional fields in the schema
+- Examples of compliant package definitions
+
+The Package Schema (`hatch_pkg_metadata_schema.json`) defines the structure for individual package metadata files in the Hatch ecosystem.
 
 ## Current Version
 
@@ -20,7 +28,7 @@ The Package Schema includes the following major sections:
 - **Compatibility Requirements**: Hatchling and Python version constraints
 - **Entry Points and Tools**: Primary entry point and additional tools
 
-For detailed field-by-field documentation including types, formats, and examples, see the [Package Schema Field Reference](fields.md).
+For detailed field-by-field documentation including types, formats, and examples, see the [Package Schema Field Reference](Fields.md).
 
 ### Compatibility
 
@@ -83,5 +91,6 @@ For detailed field-by-field documentation including types, formats, and examples
 
 ## See Also
 
-- [Registry Schema](../registry/overview.md)
-- [Schema Validation Guide](../usage/validation.md)
+- [Package Schema Field Reference](Fields.md)
+- [Registry Schema Overview](../RegistrySchema/Overview.md)
+- [Schema Validation Guide](../SchemaValidation.md)

@@ -1,10 +1,16 @@
 # Schema Validation Guide
 
-This document explains how to validate your JSON data against Hatch schemas.
+This article is about:
+- Methods for validating JSON data against Hatch schemas
+- Common validation tools and techniques
+- Troubleshooting validation errors
 
-## Validation Overview
+You will learn about:
+- How to validate metadata files for compliance
+- Using Python, command-line, and online validation tools
+- Resolving common validation issues
 
-Schema validation ensures that your metadata files comply with the expected structure. This helps catch errors early and ensures compatibility across the ecosystem.
+Schema validation ensures that your metadata files comply with the expected structure and catches errors early.
 
 ## Validation Tools
 
@@ -106,5 +112,5 @@ def validate_dependencies(data):
 
 ## See Also
 
-- [Schema Access Guide](access.md)
-- [Programmatic Usage Guide](programmatic.md)
+- [Schema Access Guide](SchemaAccess.md)
+- [Programmatic Usage Guide](ProgrammaticUsage.md)

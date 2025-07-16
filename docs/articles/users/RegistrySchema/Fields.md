@@ -1,5 +1,15 @@
 # Registry Schema Field Reference
 
+This article is about:
+- Detailed specifications for each field in the Registry Schema
+- Data types, formats, and validation rules for registry objects
+- Structure of repositories, packages, and version information
+
+You will learn about:
+- Required and optional field definitions for the registry
+- Proper formatting for registry-specific field types
+- How to structure complex objects like package versions and verification data
+
 This document provides detailed information about each field in the Registry Schema.
 
 ## Required Fields

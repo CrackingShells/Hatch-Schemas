@@ -1,6 +1,16 @@
 # Programmatic Usage Guide
 
-This guide explains how to use Hatch schemas programmatically in your applications.
+This article is about:
+- Using Hatch schemas programmatically in applications
+- Schema loading, caching, and retrieval techniques
+- Integration patterns for automated workflows
+
+You will learn about:
+- How to load schemas programmatically
+- Implementing schema caching for performance
+- Building validation into your applications
+
+This guide covers integrating Hatch schemas into your applications and automated workflows.
 
 ## Simple Schema Loading
 
@@ -103,7 +113,7 @@ except jsonschema.ValidationError as e:
 
 ## Advanced Use Cases
 
-An, implementation example is also [available](../../examples/schema_updater.py)
+An implementation example is also [available](../../examples/schema_updater.py)
 
 ### Schema Caching
 
@@ -160,5 +170,5 @@ def load_schema_with_cache(schema_type, version=None):
 
 ## See Also
 
-- [Schema Access Guide](access.md)
-- [Schema Validation Guide](validation.md)
+- [Schema Access Guide](SchemaAccess.md)
+- [Schema Validation Guide](SchemaValidation.md)
