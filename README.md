@@ -7,8 +7,8 @@ JSON schemas for the CrackingShells organization package ecosystem.
 This repository contains JSON schemas for validating Hatch metadata:
 
 - **Package Schema**: Validates individual package metadata. [Learn More](docs/package/overview.md)
-  - Latest: `package/v1.2.0/hatch_pkg_metadata_schema.json`
-  - Versioned: `package/v1.2.0/hatch_pkg_metadata_schema.json`
+  - Latest: `package/v1.2.1/hatch_pkg_metadata_schema.json`
+  - Versioned: `package/v1.2.1/hatch_pkg_metadata_schema.json`, `package/v1.2.0/hatch_pkg_metadata_schema.json`
   - Deprecated: `package/v1.0/hatch_pkg_metadata_schema.json`, `package/v1.1.0/hatch_pkg_metadata_schema.json`
 
 - **Registry Schema**: Validates the central package registry. [Learn More](docs/registry/overview.md)

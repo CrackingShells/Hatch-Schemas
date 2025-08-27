@@ -2,7 +2,49 @@
 
 This document provides examples of valid package metadata files compliant with the Hatch Package Schema.
 
-## Basic Example
+## v1.2.1 Dual Entry Point Example
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/package/v1.2.1/hatch_pkg_metadata_schema.json",
+  "package_schema_version": "1.2.1",
+  "name": "arithmetic_package",
+  "version": "1.3.0",
+  "description": "A package for arithmetic operations with dual entry points",
+  "tags": ["math", "arithmetic", "dual-entry"],
+  "author": {
+    "name": "John Doe",
+    "email": "john.doe@example.com"
+  },
+  "license": {
+    "name": "MIT"
+  },
+  "entry_point": {
+    "mcp_server": "mcp_arithmetic.py",
+    "hatch_mcp_server": "hatch_mcp_arithmetic.py"
+  },
+  "tools": [
+    {"name": "add", "description": "Add two numbers together."},
+    {"name": "subtract", "description": "Subtract one number from another."},
+    {"name": "multiply", "description": "Multiply two numbers together."},
+    {"name": "divide", "description": "Divide one number by another."}
+  ],
+  "dependencies": {
+    "hatch": [],
+    "python": [{
+      "name": "numpy", "version_constraint": ">=2.2.0", "package_manager": "pip"
+    }],
+    "system": [],
+    "docker": []
+  },
+  "citations": {
+    "origin": "John Doe, \"Origin: Example MCP Server for Hatch!\", 2025",
+    "mcp": "John Doe, \"MCP: Example Arithmetic Tools for Hatch!\", 2025"
+  }
+}
+```
+
+## Basic Example (v1.2.0)
 
 ```json
 {
