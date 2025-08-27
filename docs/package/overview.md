@@ -6,7 +6,7 @@ The Package Schema (`hatch_pkg_metadata_schema.json`) defines the structure for 
 
 ## Current Version
 
-The current version of the Package Schema is **v1.2.0**.
+The current version of the Package Schema is **v1.2.1**.
 
 ## Schema Structure
 
@@ -18,7 +18,7 @@ The Package Schema includes the following major sections:
 - **Package Links**: Repository and documentation URLs
 - **Dependencies**: Hatch, Python, system, and Docker dependencies
 - **Compatibility Requirements**: Hatchling and Python version constraints
-- **Entry Points and Tools**: Primary entry point and additional tools
+- **Entry Points and Tools**: Dual entry point configuration (FastMCP server + HatchMCP wrapper) and additional tools
 
 For detailed field-by-field documentation including types, formats, and examples, see the [Package Schema Field Reference](fields.md).
 
@@ -43,10 +43,10 @@ For detailed field-by-field documentation including types, formats, and examples
 
 ```json
 {
-  "package_schema_version": "1.2.0",
+  "package_schema_version": "1.2.1",
   "name": "example_package",
   "version": "1.0.0",
-  "description": "An example Hatch package",
+  "description": "An example Hatch package with dual entry points",
   "tags": ["example", "demo"],
   "author": {
     "name": "John Doe",
@@ -56,7 +56,10 @@ For detailed field-by-field documentation including types, formats, and examples
     "name": "MIT",
     "uri": "https://opensource.org/licenses/MIT"
   },
-  "entry_point": "server.py",
+  "entry_point": {
+    "mcp_server": "mcp_server.py",
+    "hatch_mcp_server": "hatch_mcp_server.py"
+  },
   "dependencies": {
     "hatch": [
       {
