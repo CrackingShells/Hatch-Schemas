@@ -147,17 +147,21 @@ This document provides detailed information about each field in the Package Sche
 - **Each Dependency**:
   - **name** (String): Name of the Python package
   - **version_constraint** (String): Version constraint (e.g., ">=1.0.0")
-  - **package_manager** (String, default: "pip"): Package manager to use
+  - **package_manager** (String, default: "pip"): Package manager to use ("pip" or "conda")
+  - **channel** (String, optional): Conda channel to use when package_manager is "conda" (e.g., "colomoto", "conda-forge", "bioconda")
 - **Example**:
   ```json
   "python": [
     {
       "name": "numpy",
-      "version_constraint": ">=1.20.0"
+      "version_constraint": ">=1.20.0",
+      "package_manager": "pip"
     },
     {
-      "name": "pandas",
-      "version_constraint": ">=1.3.0"
+      "name": "maboss",
+      "version_constraint": ">=2.5.0",
+      "package_manager": "conda",
+      "channel": "colomoto"
     }
   ]
   ```

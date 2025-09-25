@@ -2,6 +2,62 @@
 
 This document provides examples of valid package metadata files compliant with the Hatch Package Schema.
 
+## v1.2.2 Conda Channel Support Example
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/package/v1.2.2/hatch_pkg_metadata_schema.json",
+  "package_schema_version": "1.2.2",
+  "name": "bioinformatics_package",
+  "version": "1.0.0",
+  "description": "A bioinformatics package with conda channel support",
+  "tags": ["bioinformatics", "conda", "maboss"],
+  "author": {
+    "name": "Jane Doe",
+    "email": "jane.doe@example.com"
+  },
+  "license": {
+    "name": "MIT"
+  },
+  "entry_point": {
+    "mcp_server": "mcp_server.py",
+    "hatch_mcp_server": "hatch_mcp_server.py"
+  },
+  "tools": [
+    {"name": "simulate", "description": "Run MaBoSS simulation."},
+    {"name": "analyze", "description": "Analyze simulation results."}
+  ],
+  "dependencies": {
+    "hatch": [],
+    "python": [
+      {
+        "name": "maboss",
+        "version_constraint": ">=2.5.0",
+        "package_manager": "conda",
+        "channel": "colomoto"
+      },
+      {
+        "name": "biopython",
+        "version_constraint": ">=1.78",
+        "package_manager": "conda",
+        "channel": "conda-forge"
+      },
+      {
+        "name": "requests",
+        "version_constraint": ">=2.25.0",
+        "package_manager": "pip"
+      }
+    ],
+    "system": [],
+    "docker": []
+  },
+  "citations": {
+    "origin": "Jane Doe, \"Bioinformatics MCP Server for Hatch!\", 2025",
+    "mcp": "Jane Doe, \"MaBoSS Integration Tools for Hatch!\", 2025"
+  }
+}
+```
+
 ## v1.2.1 Dual Entry Point Example
 
 ```json
