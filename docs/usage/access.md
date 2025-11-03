@@ -32,7 +32,8 @@ Access schema files directly from the GitHub repository:
 
 ```bash
 # Direct access to schema files (always current from main branch)
-https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/package/v1.2.0/hatch_pkg_metadata_schema.json
+https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/package/v1.2.2/hatch_pkg_metadata_schema.json
+https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/package/v1.2.1/hatch_pkg_metadata_schema.json
 https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/registry/v1.2.0/hatch_all_pkg_metadata_schema.json
 ```
 
@@ -45,7 +46,8 @@ You can reference these schemas in your JSON files using the `$schema` property:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/package/v1.2.0/hatch_pkg_metadata_schema.json",
+  "$schema": "https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/package/v1.2.2/hatch_pkg_metadata_schema.json",
+  "package_schema_version": "1.2.2",
   "name": "my_package",
   "version": "1.0.0",
   "description": "My awesome package",

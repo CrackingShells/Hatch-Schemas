@@ -1,0 +1,72 @@
+{
+  "$schema": "https://raw.githubusercontent.com/crackingshells/Hatch-Schemas/main/package/v1.2.2/hatch_pkg_metadata_schema.json",
+  "package_schema_version": "1.2.2",
+  "name": "maboss_simulation_package",
+  "version": "1.0.0",
+  "description": "A Hatch package for MaBoSS Boolean network simulations with conda channel support",
+  "tags": ["maboss", "boolean-networks", "simulation", "bioinformatics"],
+  "author": {
+    "name": "Systems Biology Researcher",
+    "email": "researcher@example.com"
+  },
+  "license": {
+    "name": "MIT",
+    "uri": "https://opensource.org/licenses/MIT"
+  },
+  "repository": "https://github.com/example/maboss-simulation-package",
+  "documentation": "https://docs.example.com/maboss-package",
+  "entry_point": {
+    "mcp_server": "mcp_maboss_server.py",
+    "hatch_mcp_server": "hatch_mcp_maboss_server.py"
+  },
+  "tools": [
+    {
+      "name": "simulate_network",
+      "description": "Run MaBoSS simulation on a Boolean network model"
+    },
+    {
+      "name": "analyze_results",
+      "description": "Analyze and visualize MaBoSS simulation results"
+    },
+    {
+      "name": "export_model",
+      "description": "Export Boolean network model in various formats"
+    }
+  ],
+  "dependencies": {
+    "hatch": [],
+    "python": [
+      {
+        "name": "maboss",
+        "version_constraint": ">=2.5.0",
+        "package_manager": "conda",
+        "channel": "colomoto"
+      },
+      {
+        "name": "numpy",
+        "version_constraint": ">=1.20.0",
+        "package_manager": "pip"
+      },
+      {
+        "name": "pandas",
+        "version_constraint": ">=1.3.0",
+        "package_manager": "pip"
+      },
+      {
+        "name": "matplotlib",
+        "version_constraint": ">=3.5.0",
+        "package_manager": "conda",
+        "channel": "conda-forge"
+      }
+    ],
+    "system": [],
+    "docker": []
+  },
+  "compatibility": {
+    "python": ">=3.8"
+  },
+  "citations": {
+    "origin": "Systems Biology Researcher, \"MaBoSS Simulation Package for Hatch\", 2025",
+    "mcp": "MaBoSS Boolean Network Simulation Tools for Model Checking Platform"
+  }
+}

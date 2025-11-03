@@ -6,7 +6,15 @@ The Package Schema (`hatch_pkg_metadata_schema.json`) defines the structure for 
 
 ## Current Version
 
-The current version of the Package Schema is **v1.2.1**.
+The current version of the Package Schema is **v1.2.2**.
+
+### Version History
+
+- **v1.2.2**: Added conda channel support for Python dependencies
+- **v1.2.1**: Introduced dual entry point support
+- **v1.2.0**: Enhanced dependency management
+- **v1.1.0**: Added comprehensive validation
+- **v1.0**: Initial release
 
 ## Schema Structure
 
