@@ -263,6 +263,10 @@
         "provenance": {
             "type": "object",
             "description": "Reproducibility metadata describing the exact source and build environment",
+            "anyOf": [
+                { "required": ["git_sha"] },
+                { "required": ["build_env"] }
+              ],
             "properties": {
                 "git_sha": {
                     "type": "string",
