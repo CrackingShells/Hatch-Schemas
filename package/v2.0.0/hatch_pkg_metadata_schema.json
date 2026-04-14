@@ -1,0 +1,406 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Hatch Package Metadata",
+    "description": "Schema for Hatch MCP Server package metadata with dual entry point support and conda channel support",
+    "type": "object",
+    "required": [
+        "hatch_schema_version",
+        "authors",
+        "entry_point"
+    ],
+    "properties": {
+        "$schema": {
+            "type": "string",
+            "format": "uri",
+            "description": "JSON Schema reference URI"
+        },
+        "hatch_schema_version": {
+            "type": "string",
+            "description": "Version of the Hatch package schema used for this package metadata",
+            "pattern": "^2\\.0\\.0$"
+        },
+        "name": {
+            "type": "string",
+            "description": "Package name in reverse-DNS format with a single '/' separating namespace and server name (e.g., 'io.github.user/weather')",
+            "minLength": 3,
+            "maxLength": 200,
+            "pattern": "^[a-zA-Z0-9.-]+/[a-zA-Z0-9._-]+$"
+        },
+        "version": {
+            "type": "string",
+            "description": "Semantic version of the package",
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
+        },
+        "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Human-readable description of the package"
+        },
+        "authors": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "dependencies": {
+            "type": "object",
+            "properties": {
+                "hatch": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9_\\-./\\\\:]+$",
+                                "description": "Name of a Hatch package dependency. The name can match an absolute or relative path for local packages. If it is a relative path, it is relative to the package's root directory. For remote packages (i.e. packages on the official registry): reverse-DNS format with a single '/' separating namespace and server name (e.g., 'io.github.user/weather')"
+                            },
+                            "version_constraint": {
+                                "type": "string",
+                                "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                "description": "Hatch version constraint for this dependency"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "description": "Hatch packages required"
+                },
+                "python": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "pattern": "^[\\w\\-./\\\\]+$",
+                                "description": "Name of the Python package. The name can match an absolute or relative path to a directory to a local package. If it is a relative path, it is relative to the package's root directory"
+                            },
+                            "version_constraint": {
+                                "type": "string",
+                                "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                "description": "Version constraint for the Python package"
+                            },
+                            "package_manager": {
+                                "type": "string",
+                                "enum": [
+                                    "pip",
+                                    "conda"
+                                ],
+                                "default": "pip",
+                                "description": "Package manager to use for installation"
+                            },
+                            "channel": {
+                                "type": "string",
+                                "pattern": "^[a-zA-Z0-9_\\-]+$",
+                                "description": "Conda channel to use when package_manager is 'conda' (e.g., 'colomoto', 'conda-forge', 'bioconda')"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "description": "Python packages required"
+                },
+                "system": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]*$",
+                                "description": "Name of a system package dependency"
+                            },
+                            "version_constraint": {
+                                "type": "string",
+                                "pattern": "^\\s*(==|>=|<=|!=)\\s*\\d+(\\.\\d+)*$",
+                                "description": "Version constraint for the system package"
+                            },
+                            "package_manager": {
+                                "type": "string",
+                                "enum": [
+                                    "apt"
+                                ],
+                                "default": "apt",
+                                "description": "Package manager to use for installation"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "description": "System packages required"
+                },
+                "docker": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "digest"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._/-]*[A-Za-z0-9])?$",
+                                "description": "Name of a Docker image dependency, allowing common repository/image naming patterns"
+                            },
+                            "digest": {
+                                "type": "string",
+                                "pattern": "^sha256:[A-Fa-f0-9]{64}$",
+                                "description": "Immutable image digest (sha256)"
+                            },
+                            "tag": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$",
+                                "description": "Optional Docker image tag"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "description": "Docker images required"
+                }
+            },
+            "additionalProperties": false
+        },
+        "entry_point": {
+            "type": "object",
+            "description": "Dual entry point configuration for FastMCP server and HatchMCP wrapper",
+            "properties": {
+                "mcp_server": {
+                    "type": "string",
+                    "description": "FastMCP server implementation file",
+                    "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*\\.py$"
+                },
+                "hatch_mcp_server": {
+                    "type": "string",
+                    "description": "HatchMCP wrapper file",
+                    "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*\\.py$"
+                }
+            },
+            "required": [
+                "mcp_server",
+                "hatch_mcp_server"
+            ],
+            "additionalProperties": false
+        },
+        "tags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Keywords for discovery"
+        },
+        "license": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name or type of the license for this package"
+                },
+                "uri": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL to the license text. It can point to a file in the package or an external URL"
+                }
+            },
+            "additionalProperties": false
+        },
+        "tools": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "desc"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Function name exposed by the MCP server"
+                    },
+                    "desc": {
+                        "type": "string",
+                        "description": "Human-readable description of what the function does"
+                    }
+                },
+                "additionalProperties": false,
+                "description": "Metadata describing an individual MCP tool/function"
+            },
+            "description": "Functions exposed by the MCP server that can be invoked by clients"
+        },
+        "documentation": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the package documentation"
+        },
+        "provenance": {
+            "type": "object",
+            "description": "Reproducibility metadata describing the exact source and build environment",
+            "anyOf": [
+                { "required": ["git_sha"] },
+                { "required": ["build_env"] }
+              ],
+            "properties": {
+                "git_sha": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{7,40}$",
+                    "description": "Git commit SHA (short or full 40-character hash)"
+                },
+                "build_env": {
+                    "type": "string",
+                    "enum": [
+                        "conda-lock",
+                        "pip-compile",
+                        "manual"
+                    ],
+                    "description": "Dependency locking strategy used for the build"
+                }
+            },
+            "additionalProperties": false
+        },
+        "citations": {
+            "type": "array",
+            "description": "List of citations",
+            "items": {
+                "type": "object",
+                "required": [
+                    "format",
+                    "value"
+                ],
+                "properties": {
+                    "format": {
+                        "type": "string",
+                        "enum": [
+                            "doi",
+                            "arxiv",
+                            "pmid",
+                            "isbn",
+                            "url",
+                            "bibtex",
+                            "ris",
+                            "csl-json",
+                            "formatted"
+                        ],
+                        "description": "Citation format or identifier type"
+                    },
+                    "value": {
+                        "type": "string",
+                        "description": "Identifier or full citation text; interpretation depends on format"
+                    },
+                    "note": {
+                        "type": "string",
+                        "description": "Optional note about the citation"
+                    }
+                },
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "format": {
+                                    "const": "doi"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "value": {
+                                    "pattern": "^10\\.\\d{4,}/\\S+$"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "format": {
+                                    "const": "arxiv"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "value": {
+                                    "pattern": "^(\\d{4}\\.\\d{4,5}(v\\d+)?|https://arxiv\\.org/abs/.+)$"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "format": {
+                                    "const": "pmid"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "value": {
+                                    "pattern": "^\\d+$"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "format": {
+                                    "const": "isbn"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "value": {
+                                    "pattern": "^(97[89])?\\d{9}[\\dX]$"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "format": {
+                                    "const": "url"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "value": {
+                                    "format": "uri"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "additionalProperties": false
+            }
+        }
+    },
+    "additionalProperties": false
+}

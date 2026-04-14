@@ -1,0 +1,81 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "hatch_schema_version": "2.0.0",
+    "name": "io.github.example/invalid-server",
+    "version": "1.0.14",
+    "description": "Invalid example of a Hatch MCP server metadata.",
+    "authors": [
+      {
+        "name": "Example Author",
+        "email": "author@example.org"
+      }
+    ],
+    "dependencies": {
+      "python": [
+        {
+          "name": "numpy",
+          "version_constraint": "==1.26.0",
+          "package_manager": "conda",
+          "channel": "conda-forge"
+        }
+      ],
+      "system": [
+        {
+          "name": "libgomp1",
+          "version_constraint": "==12.3.0",
+          "package_manager": "apt"
+        }
+      ],
+      "docker": [
+        {
+          "name": "ghcr.io/example/image",
+          "tag": "1.0.0",
+          "digest": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "hatch": [
+        {
+          "name": "io.github.example/peer-pkg",
+          "version_constraint": "==0.1.0"
+        }
+      ]
+    },
+    "entry_point": {
+      "mcp_server": "server.py",
+      "hatch_mcp_server": "hatch_wrapper.py"
+    },
+    "tags": [
+      "meteorology",
+      "weather",
+      "prediction"
+    ],
+    "license": {
+      "name": "MIT",
+      "uri": "https://opensource.org/licenses/MIT"
+    },
+    "tools": [
+      {
+        "name": "get_weather",
+        "desc": "Return current weather for a requested location, fetched from Eumetnet."
+      },
+      {
+        "name": "get_forecast",
+        "desc": "Return a short-term forecast for a requested location."
+      }
+    ],
+    "documentation": "https://example.org/docs",
+    "provenance": {
+    },
+    "citations": [
+      {
+        "format": "doi",
+        "value": "10.1234/example",
+        "note": "primary paper"
+      },
+      {
+        "format": "sandwich",
+        "value": "2301.12345",
+        "note": "preprint"
+      }
+    ]
+  }
