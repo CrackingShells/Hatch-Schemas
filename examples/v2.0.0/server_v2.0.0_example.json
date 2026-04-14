@@ -65,7 +65,7 @@
     ],
     "documentation": "https://example.org/docs",
     "provenance": {
-      "git_sha": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "git_sha": "a1b2c3d",
       "build_env": "conda-lock"
     },
     "citations": [
