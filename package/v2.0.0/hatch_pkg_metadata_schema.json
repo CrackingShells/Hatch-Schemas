@@ -5,9 +5,6 @@
     "type": "object",
     "required": [
         "hatch_schema_version",
-        "name",
-        "version",
-        "description",
         "authors",
         "entry_point"
     ],
